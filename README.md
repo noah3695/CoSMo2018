@@ -1,3 +1,1 @@
-# CoSMo2018
-# CoSMo2018
-# CoSMo2018
+# CoSMo Group Project Winners 2018
