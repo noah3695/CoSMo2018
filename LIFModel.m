@@ -9,7 +9,7 @@ function [spksOut] = LIFModel(stimRate,gShared,gIndep,plotOn)
 
 % TO DO:
 % - figure out noise distributions
-% - figure out correct parameters for gains of noise vs signal
+% - figure out correct parameters for gains of noise vs signal (biophys)
 
 dT = 0.001;
 t = 0:dT:1;
@@ -29,7 +29,6 @@ stimDur = 1;
 V(1) = vRMP;
 V_AHP = -80;
 
-% spksOut = zeros(length(spkVec),1);
 numout = 0;
 spksOut = 0;
 
@@ -53,6 +52,8 @@ for i = 2:numel(t)
         numout = numout + 1;
     end
 end
+
+% Plot intracellular voltage timecourse and in/out spikes
 
 if plotOn
     figure;
@@ -78,12 +79,9 @@ end
         
     end
 
-    function [] = epsp()
-        
-    end
-
     function [] = comNoise()
-        
+        % may or may not use, depending on form of noise injection
+        % specified in other papers
     end
 
     function [] = indNoise()
