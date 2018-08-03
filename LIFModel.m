@@ -1,6 +1,7 @@
 function [spksOut] = LIFModel(stimRate,gShared,gIndep,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut] = LIFModel(stimRate,gShared,gIndep)
+%        [spksOut] = LIFModel(80,3,2)           
 %
 % - spksOut is a list of timestamps of output spikes
 % - stimRate is input spike rate in sp/s
