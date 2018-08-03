@@ -1,11 +1,12 @@
 function [spksOut] = LIFModel(stimRate,gShared,gIndep,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut] = LIFModel(stimRate,gShared,gIndep)
-% spksOut is a list of timestamps of output spikes
-% stimRate is input spike rate in sp/s
-% gShared is shared noise input
-% gIndep is independent noise that should be modulated by tuning
-% plotOn sets whether or not to plot neuron simulation
+%
+% - spksOut is a list of timestamps of output spikes
+% - stimRate is input spike rate in sp/s
+% - gShared is shared noise input
+% - gIndep is independent noise that should be modulated by tuning
+% - plotOn sets whether or not to plot neuron simulation
 
 % TO DO:
 % - figure out noise distributions
