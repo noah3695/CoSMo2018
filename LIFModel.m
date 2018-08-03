@@ -9,7 +9,7 @@ function [spksOut] = LIFModel(stimRate,gShared,gIndep,plotOn)
 % - plotOn sets whether or not to plot neuron simulation
 
 % TO DO:
-% - figure out noise distributions
+% - figure out noise distributions (balance of gains)
 % - figure out correct parameters for gains of noise vs signal (biophys)
 
 dT = 0.001;
