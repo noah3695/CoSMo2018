@@ -68,7 +68,7 @@ switch what
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)),'-struct','TT');
-    case 'CHOOSE_subsetPop'
+    case 'PLOT_population'
         % choose subsets of generated population
         numNeuron = 500;
         numStim = 5;
@@ -100,7 +100,7 @@ switch what
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
         
         figure(3)
-        
+    case 'CHOOSE_subsets' 
         
     case 'PLOT_LIF'
     otherwise
