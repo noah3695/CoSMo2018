@@ -1,20 +1,23 @@
-function [spksOut] = LIFModel(stimRate,gShared,gIndep,plotOn)
+function [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % Leaky integrate and Fire Model
-% Usage: [spksOut] = LIFModel(stimRate,gShared,gIndep)
-%        [spksOut] = LIFModel(80,3,2)           
+% Usage: [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
+%        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)           
 %
 % - spksOut is a list of timestamps of output spikes
-% - stimRate is input spike rate in sp/s
+% - spkInds provides a vector of spike times
+% - spkVec is a binary vector of length t/dt + 1
 % - gShared is shared noise input
 % - gIndep is independent noise that should be modulated by tuning
 % - plotOn sets whether or not to plot neuron simulation
+%
+%   Note: Must generate spkInds,spkVec,gIndep with genSpikes.m and 
+%         indNoise.m prior to running
 
 % TO DO:
 % - figure out noise distributions (balance of gains)
 % - figure out correct parameters for gains of noise vs signal (biophys)
 
-dT = 0.001;
-t = 0:dT:1;
+t = [0:dT:1]';
 
 % Biophys Params
 tau = 0.015;
@@ -22,10 +25,6 @@ R = 400000; % ohms
 Iepsc = 0.00008; % amps
 thresh = -20;   % Spike threshold voltage
 vRMP = -65;     % resting membrane potential
-
-% Stim Params
-stimDur = 1;
-[spkInds,spkVec] = genSpikes(stimDur,stimRate,dT);
 
 % Iterate over time period
 V(1) = vRMP;
@@ -36,19 +35,19 @@ spksOut = 0;
 
 for i = 2:numel(t)
     % Reset if previous timepoint spiked
-    if V(i-1) >= -20
-        V(i) = V_AHP;
+    if V(i-1,1) >= -20
+        V(i,1) = V_AHP;
         continue
     end
     
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
     % normal noise + more normal noise
-    V(i) = V(i-1) + (1/tau)*(vRMP - V(i-1))*dT + R*Iepsc*spkVec(i-1) + ...
-        gShared*randn(1) + gIndep*randn(1); % + comNoise() + indNoise();
+    V(i,1) = V(i-1,1) + (1/tau)*(vRMP - V(i-1,1))*dT + R*Iepsc*spkVec(i-1) + ...
+        gShared*randn(1) + gIndep(i-1); % + comNoise() + indNoise();
     
     % Spike if threshold is reached
-    if V(i) >= thresh
-        V(i) = 40;
+    if V(i,1) >= thresh
+        V(i,1) = 40;
         
         spksOut(numout+1) = i;
         numout = numout + 1;
@@ -66,27 +65,4 @@ if plotOn
     scatter(t(spksOut),45*ones(numel(spksOut),1),'.r');
 end
 
-%%%%%%%%%%%%%%%%%%%%%%  Local Functions  %%%%%%%%%%%%%%%%%%%%%%%%
-
-    function [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT)
-        % Generate a binary spike train over stimulus period
-        spkVec = zeros(stimDur/dT,1);
-        spkInts = floor(1/(dT*spkRate));
-        
-        % Deterministic input spike train
-        spkInds = 1:spkInts:spkInts*spkRate;
-        spkVec(spkInds) = 1;
-        
-        % Poisson input spike train?
-        
-    end
-
-    function [] = comNoise()
-        % may or may not use, depending on form of noise injection
-        % specified in other papers
-    end
-
-    function [] = indNoise()
-        
-    end
 end
