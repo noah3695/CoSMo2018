@@ -54,7 +54,7 @@ switch what
                 % 2) generate spikes
                 [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                 % 3) run the LIFModel
-                T.spikes = LIFModel(spkInds,spkVec,gShared*ones(size(spkVec)),gIndep,dT,plotOn)
+                T.spikes = LIFModel(spkInds,spkVec,gShared*ones(size(spkVec)),gIndep,dT,plotOn);
                 T.neuron = n;
                 T.prefDir = D.prefDir(n);
                 T.stimDir = t;
