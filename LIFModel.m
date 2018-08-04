@@ -6,7 +6,7 @@ function [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % - spksOut is a list of timestamps of output spikes
 % - spkInds provides a vector of spike times
 % - spkVec is a binary vector of length t/dt + 1
-% - gShared is shared noise input
+% - gShared is shared noise input (a vector for all cells in pop)
 % - gIndep is independent noise that should be modulated by tuning
 % - plotOn sets whether or not to plot neuron simulation
 %
@@ -41,9 +41,9 @@ for i = 2:numel(t)
     end
     
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
-    % normal noise + more normal noise
+    % independent noise + shared noise
     V(i,1) = V(i-1,1) + (1/tau)*(vRMP - V(i-1,1))*dT + R*Iepsc*spkVec(i-1) + ...
-        gShared*randn(1) + gIndep(i-1); % + comNoise() + indNoise();
+        gIndep*randn(1) + gShared(i-1);
     
     % Spike if threshold is reached
     if V(i,1) >= thresh
