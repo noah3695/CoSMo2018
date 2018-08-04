@@ -1,7 +1,7 @@
 function varargout = cosmo(what,varargin)
 
 % Define common stuff here
-baseDir = '/Users/Eva/Documents/Data/CoSMo2018'; % differs per person
+baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
 
 switch what
