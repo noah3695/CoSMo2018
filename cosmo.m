@@ -11,7 +11,7 @@ switch what
         numNeuron = 500; % number of neurons altogether
         numStim   = 4;
         sigma     = 0.4;
-        scale     = 2; % scaling function
+        scale     = 1; % scaling function
         offset    = 0.5;
         plotFig   = 1;
         vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
@@ -32,15 +32,15 @@ switch what
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir');
     case 'GEN_LIF'
         % define default parameters for LIFModel
-        gShared     = 3;
-        gIndep      = 2;
+        gShared     = 0.02; % shared noise
+        gIndep      = 0.01; % independent noise
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 500;
         numStim     = 10;
         numRep      = 50;
-        spikeScale  = 30;
+        spikeScale  = 30; % in Hz
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
@@ -75,7 +75,32 @@ switch what
         vararginoptions(varargin,{'numNeuron','numStim'});
         
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
-        keyboard;
+        for l=1:numStim
+            legLab{l} = sprintf('stim-%d',l);
+        end
+        
+        % extract variance and mean
+        T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
+            {'spikeNum','var','name','spikeNum_var'});
+        % plot responses in dependence of preferred - presented stimulus
+        figure(1)
+        subplot(1,2,1)
+        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
+                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        xlabel('Preferred-presented stimulus');
+        ylabel('Mean spike number response');
+        subplot(1,2,2)
+        % calculate the variance
+        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        ylabel('Variance in spike number across trials');
+        
+        % plot stuff
+        figure(2)
+        barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
+        
+        figure(3)
+        
         
     case 'PLOT_LIF'
     otherwise
