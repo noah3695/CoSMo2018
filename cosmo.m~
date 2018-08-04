@@ -5,28 +5,31 @@ baseDir = '/Users/Eva/Documents/Data/CoSMo2018'; % differs per person
 dataDir = fullfile(baseDir,'data');
 
 switch what
-    case 'GEN_tuningPop'
+    case 'GEN_tunedPopulation'
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
-        numNeuron = 500; % tuned neurons PER(!) stimulus
+        numNeuron = 500; % number of neurons altogether
         numStim   = 4;
         sigma     = 0.25;
-        A = 2; % scaling function
-        offset = 0.5;
-        vararginoptions(varargin,{'numNeuron','numStim'});
+        scale     = 2; % scaling function
+        offset    = 0.5;
+        plotFig   = 1;
+        vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning
-        % preferred tuning
         prefDir = randi(numStim,[numNeuron,1]);
-        tuning = (A*exp(-([1:numStim]-prefDir).^2)./(2*sigma^2))+offset;
-        
-        figure
-        for i=1:numStim
-            subplot(1,numStim,i)
-            plot(tuning(prefDir==i));
+        tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma^2))+offset;      
+        if plotFig==1 % optional plotting of tuning functions across neurons
+            figure
+            hold on;
+            for i=1:numStim
+                subplot(1,numStim,i)
+                plot([1:numStim],tuning(prefDir==i,:));
+            end
         end
-        
-        keyboard;
+        %varargout{1}=tuning;
+        % save the tuning matrix (numNeuron x numStim)
+        save(fullfile(dataDir,sprintf('tunMatrix_%dneuron_%dstim',numNeuron,numStim)),'tuning');
     case 'GEN_LIF'
         % define inputs for the LIF
         % scaling parameters
@@ -34,9 +37,22 @@ switch what
         gShared  = 3;
         gIndep   = 2;
         plotOn   = 1;
-        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn'});
+        stimDur  = 2; % in seconds
+        dt = 0.001; % time 
+        numNeuron = 500;
+        numStim = 10;
+        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur'});
+        
+        % load the correct tuning matrix
+        D = load(fullfile(dataDir,sprintf('tunMatrix_%dneuron_%dstim',numNeuron,numStim)));
+        for n=1:numNeuron
+            % 1) generate spikes based on tuning function
+            [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT)
+            % 2) run the LIFModel
+        end
         % run the model
         D=LIFModel(stimRate,gShared,gIndep,plotOn);
+        keyboard;
         % save the outputs
     case 'PLOT_LIF'
     otherwise
