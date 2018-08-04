@@ -1,4 +1,4 @@
-function [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
+function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 %        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)           
@@ -19,35 +19,35 @@ function [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 
 t = [0:dT:1]';
 
-% Biophys Params
-tau = 0.010; % ---- NS changed (original 0.015)
-R = 400000; % ohms
-Iepsc = 0.00008; % amps
-thresh = -55;   % Spike threshold voltage (original -20)
-vRMP = -70;     % resting membrane potential
+% Biophys Params (Wong & Wang 2006)
+tau = 0.020; % ---- NS changed (original 0.015)
+Vthresh = -0.050;   % Spike threshold voltage (original -20)
+vRMP = -0.070;     % resting membrane potential
 
 % Iterate over time period
 V(1) = vRMP;
-V_AHP = -55; % original -80
+% V_AHP = -0.055; % original -80
+V_AHP = -0.080; % original -80
 
 numout = 0;
 spksOut = 0;
 
 for i = 2:numel(t)
     % Reset if previous timepoint spiked
-    if V(i-1,1) >= -20
+    if V(i-1,1) >= Vthresh
         V(i,1) = V_AHP;
+        
         continue
     end
     
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
     % independent noise + shared noise
-    V(i,1) = V(i-1,1) + (1/tau)*(vRMP - V(i-1,1))*dT + R*Iepsc*spkVec(i-1) + ...
+    V(i,1) = V(i-1,1) - (1/tau)*(V(i-1,1) - vRMP)*dT -(1/tau)*V(i-1,1)*spkVec(i-1) + ...
         gIndep*randn(1) + gShared(i-1);
     
     % Spike if threshold is reached
-    if V(i,1) >= thresh
-        V(i,1) = 40;
+    if V(i,1) >= Vthresh
+        V(i,1) = 0.040;
         
         spksOut(numout+1) = i;
         numout = numout + 1;
@@ -59,7 +59,7 @@ end
 if plotOn
     figure;
     hold on;
-    plot(t,V);
+    plot(t,V*1000);
     set(gca,'YLim',[-100 60],'XLim',[0 0.50]);
     scatter(t(spkInds),50*spkVec(spkInds),'.k');
     scatter(t(spksOut),45*ones(numel(spksOut),1),'.r');
