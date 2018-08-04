@@ -1,7 +1,7 @@
 function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
-%        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)           
+%        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)
 %
 % - spksOut is a list of timestamps of output spikes
 % - spkInds provides a vector of spike times
@@ -10,7 +10,7 @@ function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % - gIndep is independent noise that should be modulated by tuning
 % - plotOn sets whether or not to plot neuron simulation
 %
-%   Note: Must generate spkInds,spkVec,gIndep with genSpikes.m and 
+%   Note: Must generate spkInds,spkVec,gIndep with genSpikes.m and
 %         indNoise.m prior to running
 
 % TO DO:
@@ -42,7 +42,7 @@ for i = 2:numel(t)
     
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
     % independent noise + shared noise
-    V(i,1) = V(i-1,1) - (1/tau)*(V(i-1,1) - vRMP)*dT -(1/tau)*V(i-1,1)*spkVec(i-1) + ...
+    V(i,1) = V(i-1,1) - (1/tau)*(V(i-1,1) - vRMP)*dT -0.006*(1/tau)*V(i-1,1)*spkVec(i-1) + ...
         gIndep*randn(1) + gShared(i-1);
     
     % Spike if threshold is reached
@@ -60,9 +60,13 @@ if plotOn
     figure;
     hold on;
     plot(t,V*1000);
-    set(gca,'YLim',[-100 60],'XLim',[0 0.50]);
+    ylabel('Voltage (mV)');
+    xlabel('Time (sec)');
+    set(gca,'YLim',[-100 60],'XLim',[0 1]);
     scatter(t(spkInds),50*spkVec(spkInds),'.k');
-    scatter(t(spksOut),45*ones(numel(spksOut),1),'.r');
+    if spksOut ~= 0
+        scatter(t(spksOut),45*ones(numel(spksOut),1),'.r');
+    end
 end
 
 end
