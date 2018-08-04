@@ -1,4 +1,4 @@
-function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
+function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,stimDur,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 %        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)
@@ -17,7 +17,7 @@ function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
 % - figure out noise distributions (balance of gains)
 % - figure out correct parameters for gains of noise vs signal (biophys)
 
-t = [0:dT:1]';
+t = [0:dT:stimDur]';
 
 % Biophys Params (Wong & Wang 2006)
 tau = 0.020; % ---- NS changed (original 0.015)
@@ -26,7 +26,7 @@ vRMP = -0.070;     % resting membrane potential
 
 % Iterate over time period
 V(1) = vRMP;
-% V_AHP = -0.055; % original -80
+% V_AHP = -0.055; % from wong & wang + 2ms lockout period)
 V_AHP = -0.080; % original -80
 
 numout = 0;
