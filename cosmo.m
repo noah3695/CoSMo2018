@@ -32,20 +32,21 @@ switch what
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir');
     case 'GEN_LIF'
         % define default parameters for LIFModel
-        gShared     = 0.02; % shared noise
-        gIndep      = 0.01; % independent noise
+        gShared     = 0.002; % shared noise
+        gIndep      = 0.001; % independent noise
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 500;
-        numStim     = 10;
+        numStim     = 5;
         numRep      = 50;
         spikeScale  = 30; % in Hz
-        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep'});
+        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
+        gSharedVec = sharedNoise(gShared,dT,stimDur);
         for t=1:numStim
             for r=1:numRep
                 for n=1:numNeuron
@@ -54,12 +55,13 @@ switch what
                     % 2) generate spikes
                     [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                     % 3) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gShared*ones(size(spkVec)),gIndep,dT,plotOn);
+                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                     T.spikeNum  = numel(T.spikes{1});
                     T.neuron    = n;
                     T.prefDir   = D.prefDir(n);
                     T.stimDir   = t;
                     TT          = addstruct(TT,T);
+                    clear spkVec spkRate spkInds;
                 end
                 fprintf('Generated all neurons for stimulus: %d/%d repetition %d/%d\n',t,numStim,r,numRep);  
             end
@@ -98,11 +100,57 @@ switch what
         % plot stuff
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
+    
+    case 'CALC_corr'
+        numNeuron = 500;
+        numStim = 5;
+        vararginoptions(varargin,{'numNeuron','numStim'});
         
-        figure(3)
-    case 'CHOOSE_subsets' 
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+        % extract variance and mean
+        T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
+            {'spikeNum','var','name','spikeNum_var'});
+        DD=[];
+        for i=1:numNeuron
+            for j=i:numNeuron
+                D.corrMean  = corr(T1.spikeNum_mean(T1.neuron==i),T1.spikeNum_mean(T1.neuron==j));
+                D.corrVar   = corr(T1.spikeNum_var(T1.neuron==i),T1.spikeNum_var(T1.neuron==j));
+                D.neuron1   = i;
+                D.neuron2   = j;
+                pref1 = T1.prefDir(T1.neuron==i);
+                pref2 = T1.prefDir(T1.neuron==j);
+                D.prefDir1  = pref1(1);
+                D.prefDir2  = pref2(1);
+                DD = addstruct(DD,D);
+                Rm(i,j)=D.corrMean;
+                Rv(i,j)=D.corrVar;
+            end
+            fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
+        end    
+        save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD');
         
-    case 'PLOT_LIF'
+    case 'PLOT_corr'
+        numNeuron=500;
+        vararginoptions(varargin,{'numNeuron'});
+        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
+        % make into matrix
+        M_mean  = rsa_squareIPM(T.corrMean');
+        M_var   = rsa_squareIPM(T.corrVar');
+        
+        % choose neuron pairs with the same preferred direction
+        indx1 = T.neuron1(find(T.prefDir1==T.prefDir2 & T.neuron1~=T.neuron2));
+        indx2 = T.neuron2(find(T.prefDir1==T.prefDir2 & T.neuron1~=T.neuron2));
+        % make smaller matrices
+        M1_mean = M_mean(indx1,indx2);
+        M1_var  = M_var(indx1,indx2);
+        figure
+        subplot(1,2,1)
+        imagesc(M1_mean)
+        subplot(1,2,2)
+        imagesc(M1_var)
+        figure
+        imagesc(M1_mean-M1_var)
+        
     otherwise
         fprintf('No such case\n');
 
