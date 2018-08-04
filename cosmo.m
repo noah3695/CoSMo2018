@@ -10,7 +10,7 @@ switch what
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
         numNeuron = 500; % number of neurons altogether
         numStim   = 4;
-        sigma     = 0.25;
+        sigma     = 0.4;
         scale     = 2; % scaling function
         offset    = 0.5;
         plotFig   = 1;
@@ -41,7 +41,7 @@ switch what
         numStim     = 10;
         numRep      = 50;
         spikeScale  = 30;
-        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur'});
+        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
@@ -67,13 +67,15 @@ switch what
         lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
-        save(fullfile('LIF_%dneurons_%dstim'),'-struct','TT');
+        save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)),'-struct','TT');
     case 'CHOOSE_subsetPop'
         % choose subsets of generated population
         numNeuron = 500;
-        numStim = 10;
+        numStim = 5;
         vararginoptions(varargin,{'numNeuron','numStim'});
         
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+        keyboard;
         
     case 'PLOT_LIF'
     otherwise
