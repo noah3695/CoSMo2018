@@ -9,7 +9,7 @@ switch what
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
         numNeuron = 500; % number of neurons altogether
-        numStim   = 4;
+        numStim   = 5;
         sigma     = 0.4;
         scale     = 1; % scaling function
         offset    = 0.5;
