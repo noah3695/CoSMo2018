@@ -34,7 +34,7 @@ switch what
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir','gIndep');
     case 'GEN_LIF'
         % define default parameters for LIFModel
-        gShared     = 0.02; % shared noise
+        gShared     = 0.05; % shared noise
         gIndep      = 0.001; % independent noise
         plotOn      = 0;
         stimDur     = 2; % in seconds
@@ -51,7 +51,7 @@ switch what
         gSharedVec = sharedNoise(gShared,dT,stimDur);
         for t=1:numStim
             for r=1:numRep
-                Sign=(randi([0,1],numNeuron,1)*2-1)*0.02; %positive or negative
+                Sign=(randi([0,1],numNeuron,1)*2-1)*0.05; %positive or negative
                 for n=1:numNeuron
                     % 1) determine spike rate based on tuning
                     spkRate = D.tuning(n,t)*spikeScale;
@@ -180,6 +180,9 @@ switch what
             title('Difference');
             subplot(2,3,4)
             scatterplot(M1_mean(:),M1_var(:));
+            hold on
+            drawline(0,'dir','horz');
+            drawline(0,'dir','vert');
             xlabel('Mean corr'); ylabel('Noise corr');
             subplot(2,3,5)
             histogram(M1_mean(:));
