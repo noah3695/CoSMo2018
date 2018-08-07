@@ -24,6 +24,7 @@ switch what
         tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = bsxfun(@rdivide,tuning,max(tuning,[],2));
         gIndep = tuning.*1.5;
+        tuneScale = abs(randn(numNeuron,1));
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure
             hold on;
@@ -34,7 +35,7 @@ switch what
         end
         %varargout{1}=tuning;
         % save the tuning matrix (numNeuron x numStim)
-        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir','gIndep');
+        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir','gIndep','tuneScale');
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.05; % shared noise
@@ -54,14 +55,14 @@ switch what
         gSharedVec = sharedNoise(gShared,dT,stimDur);
         for t=1:numStim
             for r=1:numRep
-                Sign=(randi([0,1],numNeuron,1)*2-1)*0.05; %positive or negative
+                Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
                 for n=1:numNeuron
                     % 1) determine spike rate based on tuning
-                    spkRate = D.tuning(n,t)*spikeScale;
+                    spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
                     % 2) generate spikes
                     [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                     % 3) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(numNeuron,numStim)*Sign(numNeuron),dT,stimDur,plotOn);
+                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron),dT,stimDur,plotOn);
                     %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                     T.spikeNum  = numel(T.spikes{1});
                     T.neuron    = n;
@@ -157,7 +158,7 @@ switch what
         T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
       
         figure
-        scatterplot(T.corrMean,T.corrVar,'split',T.prefSame,'leg',{'tuning same','tuning different'},'subset',T.sameNeuron==0);
+        scatterplot(T.corrMean,T.corrVar,'split',T.prefSame,'leg',{'tuning different','tuning same'},'subset',T.sameNeuron==0);
         %plt.scatter(T.corrMean,T.corrVar,'split',T.prefSame,'leg',{'tuning same','tuning different'});
         xlabel('Signal correlation');
         ylabel('Noise correlation');
