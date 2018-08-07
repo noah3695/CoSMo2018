@@ -1,13 +1,15 @@
-function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,stimDur,plotOn)
+function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,gAnat,anatOff,dT,stimDur,plotOn)
 % Leaky integrate and Fire Model
-% Usage: [spksOut] = LIFModel(spkInds,spkVec,gShared,gIndep,dT,plotOn)
-%        [spksOut] = LIFModel([spkTimes],[0101...],3,[],0.001,1)
+% Usage: [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,gAnat,anatOff,dT,stimDur,plotOn)
+%        [spksOut] = LIFModel([spkTimes],[0101...],0.002,0.002,0.002,0.001,0.001,1,1)
 %
 % - spksOut is a list of timestamps of output spikes
 % - spkInds provides a vector of spike times
 % - spkVec is a binary vector of length t/dt + 1
 % - gShared is shared noise input (a vector for all cells in pop)
 % - gIndep is independent noise that should be modulated by tuning
+% - gAnat is gain factor for noise shared by nearby neurons
+% - anatOff is the offset factor determined by simulated topographic map
 % - plotOn sets whether or not to plot neuron simulation
 %
 %   Note: Must generate spkInds,spkVec,gIndep with genSpikes.m and
@@ -43,7 +45,7 @@ for i = 2:numel(t)
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
     % independent noise + shared noise
     V(i,1) = V(i-1,1) - (1/tau)*(V(i-1,1) - vRMP)*dT -0.006*(1/tau)*V(i-1,1)*spkVec(i-1) + ...
-        gIndep*randn(1) + gShared(i-1);
+        gIndep*randn(1) + gShared(i-1) + gAnat*(randn(1)-anatOff);
     
     % Spike if threshold is reached
     if V(i,1) >= Vthresh
