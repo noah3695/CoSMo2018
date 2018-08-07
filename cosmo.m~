@@ -125,14 +125,12 @@ switch what
                 NN=addstruct(NN,N1);
             end
         end
-        T2=tapply(NN,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
-            {'spikeNum','var','name','spikeNum_var'});
+        
         for i=1:numNeuron
             for j=i:numNeuron
                 D.corrMean  = corr(T1.spikeNum_mean(T1.neuron==i),T1.spikeNum_mean(T1.neuron==j));
                 %D.corrVar   = corr(T1.spikeNum_var(T1.neuron==i),T1.spikeNum_var(T1.neuron==j));
-                %D.corrVar   = corr(NN.spikeNum(NN.neuron==i),NN.spikeNum(NN.neuron==j));
-                D.corrVar   = corr(T2.spikeNum_var(T2.neuron==i),T2.spikeNum_var(T2.neuron==j));
+                D.corrVar   = corr(NN.spikeNum(NN.neuron==i),NN.spikeNum(NN.neuron==j));
                 D.neuron1   = i;
                 D.neuron2   = j;
                 pref1 = T1.prefDir(T1.neuron==i);
@@ -199,11 +197,9 @@ switch what
             xlabel('Mean corr'); ylabel('Noise corr');
             subplot(2,3,5)
             histogram(M1_mean(:));
-            drawline(mean(M1_mean(:)),'dir','vert');
             title('Mean corr across neuron pairs');
             subplot(2,3,6)
             histogram(M1_var(:));
-            drawline(mean(M1_var(:)),'dir','vert');
             title('Noise corr across neuron pairs');
             clear indx1 indx2 M1_mean M1_var
         end
