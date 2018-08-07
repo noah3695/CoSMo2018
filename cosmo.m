@@ -19,8 +19,11 @@ switch what
         % determine preferred tuning and variance per neuron
         prefDir = randi(numStim,[numNeuron,1]);
         sigma = abs(rand(numNeuron,1));
-        gIndep = abs(rand(numNeuron,1));
-        tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;      
+        %gIndep = abs(rand(numNeuron,1));
+       % tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
+        tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
+        tuning = bsxfun(@rdivide,tuning,max(tuning,[],2));
+        gIndep = tuning.*1.5;
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure
             hold on;
@@ -58,7 +61,7 @@ switch what
                     % 2) generate spikes
                     [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                     % 3) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(numNeuron)*Sign(numNeuron),dT,stimDur,plotOn);
+                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(numNeuron,numStim)*Sign(numNeuron),dT,stimDur,plotOn);
                     %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                     T.spikeNum  = numel(T.spikes{1});
                     T.neuron    = n;
@@ -75,7 +78,7 @@ switch what
         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)),'-struct','TT');
     case 'PLOT_population'
-        % choose subsets of generated population
+        % plot the population
         numNeuron = 100;
         numStim = 5;
         vararginoptions(varargin,{'numNeuron','numStim'});
@@ -104,7 +107,6 @@ switch what
         % plot stuff
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
-    
     case 'CALC_corr'
         numNeuron = 100;
         numStim = 5;
@@ -129,16 +131,18 @@ switch what
             {'spikeNum','var','name','spikeNum_var'});
         for i=1:numNeuron
             for j=i:numNeuron
-                D.corrMean  = corr(T1.spikeNum_mean(T1.neuron==i),T1.spikeNum_mean(T1.neuron==j));
+                D.corrMean      = corr(T1.spikeNum_mean(T1.neuron==i),T1.spikeNum_mean(T1.neuron==j));
                 %D.corrVar   = corr(T1.spikeNum_var(T1.neuron==i),T1.spikeNum_var(T1.neuron==j));
                 %D.corrVar   = corr(NN.spikeNum(NN.neuron==i),NN.spikeNum(NN.neuron==j));
-                D.corrVar   = corr(T2.spikeNum_var(T2.neuron==i),T2.spikeNum_var(T2.neuron==j));
-                D.neuron1   = i;
-                D.neuron2   = j;
-                pref1 = T1.prefDir(T1.neuron==i);
-                pref2 = T1.prefDir(T1.neuron==j);
-                D.prefDir1  = pref1(1);
-                D.prefDir2  = pref2(1);
+                D.corrVar       = corr(T2.spikeNum_var(T2.neuron==i),T2.spikeNum_var(T2.neuron==j));
+                D.neuron1       = i;
+                D.neuron2       = j;
+                D.sameNeuron    = double(i==j);
+                pref1           = T1.prefDir(T1.neuron==i);
+                pref2           = T1.prefDir(T1.neuron==j);
+                D.prefDir1      = pref1(1);
+                D.prefDir2      = pref2(1);
+                D.prefSame      = double(D.prefDir1==D.prefDir2);
                 DD = addstruct(DD,D);
                 Rm(i,j)=D.corrMean;
                 Rv(i,j)=D.corrVar;
@@ -151,11 +155,6 @@ switch what
         numNeuron=100;
         vararginoptions(varargin,{'numNeuron'});
         T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
-        
-        T.prefSame = zeros(size(T.neuron1));
-        T.prefSame(T.prefDir1==T.prefDir2)=1;
-        T.sameNeuron = zeros(size(T.neuron1));
-        T.sameNeuron(T.neuron1==T.neuron2)=1;
       
         figure
         scatterplot(T.corrMean,T.corrVar,'split',T.prefSame,'leg',{'tuning same','tuning different'},'subset',T.sameNeuron==0);
@@ -207,6 +206,18 @@ switch what
             title('Noise corr across neuron pairs');
             clear indx1 indx2 M1_mean M1_var
         end
+    case 'CHOOSE_subset'
+        numNeuron = 100;
+        vararginoptions(varargin,{'numNeuron'});
+        
+        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
+        
+        % randsample one neuron, then take the most anticorrelated, then
+        % more anticorrelated neurons
+        [sortMean,indxMean]=sort(T.corrMean);
+        [sortVar,indxVar]=sort(T.corrVar);
+        keyboard;
+        
     otherwise
         fprintf('No such case\n');
 
