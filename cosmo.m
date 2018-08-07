@@ -17,8 +17,9 @@ switch what
         vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
-        prefDir = randi(numStim,[numNeuron,1]);
-        sigma = abs(rand(numNeuron,1));
+        prefDir = kron([1:numStim]',[ones(numNeuron/numStim,1)]);
+        % organised preferred direction - pref: 1,2,...,numStim
+        sigma   = abs(rand(numNeuron,1));
         %gIndep = abs(rand(numNeuron,1));
        % tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
@@ -40,10 +41,12 @@ switch what
         % define default parameters for LIFModel
         gShared     = 0.05; % shared noise
         gIndep      = 0.001; % independent noise
+        gAnat       = 0.03;
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 100;
+        sigmaAnat   = 15;
         numStim     = 5;
         numRep      = 50;
         spikeScale  = 30; % in Hz
@@ -52,17 +55,21 @@ switch what
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
-        gSharedVec = sharedNoise(gShared,dT,stimDur);
+        anatVec = 1.5*exp(-([1:numNeuron]-round(numNeuron/2)).^2/(2*sigmaAnat.^2))+0.1;
+        
         for t=1:numStim
             for r=1:numRep
+                gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
                 Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
                 for n=1:numNeuron
                     % 1) determine spike rate based on tuning
                     spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
                     % 2) generate spikes
                     [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
-                    % 3) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron),dT,stimDur,plotOn);
+                    % 3) add anatOff 
+                    anatOff = anatVec(n);
+                    % 4) run the LIFModel
+                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron),gAnat,anatOff,dT,stimDur,plotOn);
                     %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                     T.spikeNum  = numel(T.spikes{1});
                     T.neuron    = n;
@@ -150,8 +157,7 @@ switch what
             end
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
-        save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD');
-       
+        save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
     case 'PLOT_corr'
         numNeuron=100;
         vararginoptions(varargin,{'numNeuron'});
@@ -167,46 +173,37 @@ switch what
         % make into matrix
         M_mean  = rsa_squareIPM(T.corrMean');
         M_var   = rsa_squareIPM(T.corrVar');
-        
-        for f=1:2 % do for same / diff prefDirection
-            % choose neuron pairs with the same preferred direction
-            if f==1
-                lab = 'different';
-            else
-                lab = 'same';
-            end
-            indx1 = T.neuron1(find(T.prefSame==f-1 & T.sameNeuron==0));
-            indx2 = T.neuron2(find(T.prefSame==f-1 & T.sameNeuron==0));
+        figure
+        subplot(1,3,1)
+        imagesc(M_mean);
+        title('Signal correlation across neuron pairs');
+        subplot(1,3,2)
+        imagesc(M_var);
+        title('Noise correlation across neuron pairs');
+        subplot(1,3,3)
+        imagesc(M_mean-M_var);
+        title('Difference signal-noise correlation');
             
-            % make smaller matrices
-            M1_mean = M_mean(indx1,indx2);
-            M1_var  = M_var(indx1,indx2);
-            figure
-            subplot(2,3,1)
-            imagesc(M1_mean)
-            title(sprintf('Mean corr structure %s preference tuning',lab));
-            subplot(2,3,2)
-            imagesc(M1_var)
-            title('Var corr structure');
-            subplot(2,3,3)
-            imagesc(M1_mean-M1_var)
-            title('Difference');
-            subplot(2,3,4)
-            scatterplot(M1_mean(:),M1_var(:));
-            hold on
-            drawline(0,'dir','horz');
-            drawline(0,'dir','vert');
-            xlabel('Mean corr'); ylabel('Noise corr');
-            subplot(2,3,5)
-            histogram(M1_mean(:));
-            drawline(mean(M1_mean(:)),'dir','vert');
-            title('Mean corr across neuron pairs');
-            subplot(2,3,6)
-            histogram(M1_var(:));
-            drawline(mean(M1_var(:)),'dir','vert');
-            title('Noise corr across neuron pairs');
-            clear indx1 indx2 M1_mean M1_var
-        end
+        figure
+        subplot(2,2,1)
+        scatterplot(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==0);
+        xlabel('Signal correlation'); ylabel('Noise correlation');
+        title('Neurons with diff preferred direction');
+        subplot(2,2,2)
+        scatterplot(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==1);
+        xlabel('Signal correlation'); ylabel('Noise correlation');
+        title('Neurons with same preferred direction');
+        subplot(2,2,3)
+        histplot(T.corrMean,'subset',T.sameNeuron==0);
+        hold on;
+        drawline(mean(T.corrMean(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
+        title('Distribution of signal correlation');
+        subplot(2,2,4)
+        histplot(T.corrVar,'subset',T.sameNeuron==0);
+        hold on;
+        drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
+        title('Distribution of noise correlation'); 
+      
     case 'CHOOSE_subset'
         numNeuron = 100;
         vararginoptions(varargin,{'numNeuron'});
