@@ -172,10 +172,10 @@ switch what
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
-    case 'CALC_meanResponse'
+    case 'CALC_meanResponse'    % TO DO
         numNeuron = 100;
         numStim = 5;
-        numRun = 5;
+        numRun = 7;
         numRep = 10; % per run
         
         vararginoptions(varargin,{'numNeuron','numStim'});
@@ -183,15 +183,13 @@ switch what
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
      
         % add partVec
-        T.partVec = repmat([1:5]',numNeuron*numStim*numRep,1);
-        T1=tapply(T,{'stimDir','partVec','neuron'},{'spikeNum','mean'});
+        T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});
         
         % rearrange
         for i=1:numRun
-            tmp = getrow(T1,T1.partVec==i);
-            data{i}=pivottable
-        end
+            tmp = getrow(T1,T1.numRun==i);
         keyboard;
+        end
         
     case 'PLOT_corr'
         numNeuron=100;
