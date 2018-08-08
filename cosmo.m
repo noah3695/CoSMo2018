@@ -38,7 +38,7 @@ switch what
         %varargout{1}=tuning;
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
-            'tuning','prefDir','gIndep','tuneScale','predDir','sigma','scale');
+            'tuning','prefDir','gIndep','tuneScale','predDir','sigma','scale','offset');
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.03; % shared noise
