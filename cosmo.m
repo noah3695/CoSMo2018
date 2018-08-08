@@ -41,39 +41,43 @@ switch what
             'tuning','prefDir','gIndep','tuneScale','predDir','sigma','scale','offset');
     case 'GEN_LIF'
         % define default parameters for LIFModel
-        gShared     = 0.03; % shared noise
-        gIndep      = 0.02; % independent noise
-        gAnat       = 0.01;
+        gShared     = 0.003; % shared noise
+        gIndep      = 0.005; % independent noise
+        gAnat       = 0.001;
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 100;
-        sigmaAnat   = 15;
         numStim     = 5;
         numRun      = 7;  % 7 runs
         numRep      = 10; % 10 repetitions per run, (70) overall
         spikeScale  = 30; % in Hz
+        popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
-        anatVec = repmat([1; -1], numNeuron, 1);
+        switch popType
+            case 'mixture'
+                anatVec = repmat([1; -1], numNeuron, 1);
+            case 'positive'
+                anatVec = repmat([1; -1], numNeuron, 1);     
+        end
         
         for t=1:numStim
             for r=1:numRun
                 for rep=1:numRep
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
-                    Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning
                         spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
                         % 2) generate spikes
                         [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                         % 3) add anatOff
-                        anatOff = 0;
+                        anatSign = anatVec(n);
                         % 4) run the LIFModel
-                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron)*0.05,gAnat,anatOff,dT,stimDur,plotOn);
+                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*gIndep,gAnat,anatSign,dT,stimDur,plotOn);
                         %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                         T.spikeNum  = numel(T.spikes{1});
                         T.neuron    = n;
@@ -81,8 +85,8 @@ switch what
                         T.numRep    = rep;
                         T.prefDir   = D.prefDir(n);
                         T.stimDir   = t;
+                        T.anatSign  = anatSign;
                         TT          = addstruct(TT,T);
-                        C{t}(r,n)=T.spikeNum;
                         clear spkVec spkRate spkInds;
                     end
                 end
@@ -177,23 +181,24 @@ switch what
         numNeuron = 100;
         numStim = 5;
         numRun = 7;
-        numRep = 10; % per run
         
-        vararginoptions(varargin,{'numNeuron','numStim'});
-        
+        vararginoptions(varargin,{'numNeuron','numStim'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
      
         % add partVec
-        T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});
-        
+        T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
         % rearrange
         for i=1:numRun
             tmp = getrow(T1,T1.numRun==i);
             [indx,j,k] = pivottable([tmp.stimDir],[tmp.neuron],[tmp.spikeNum],'mean');
             data(:,:,i) = indx;
         end
-        
-        acc=nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
+        % submit to classifier, distance calculation
+        acc = nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
+        dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
+        % plot distances
+        figure
+        imagesc(rsa_squareRDM(dist));
         keyboard;
         % save new data, or submit directly to classifier
         
