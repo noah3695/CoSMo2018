@@ -172,7 +172,7 @@ switch what
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
-    case 'CALC_meanResponse'    % TO DO
+    case 'CALC_classify'   
         numNeuron = 100;
         numStim = 5;
         numRun = 7;
@@ -188,8 +188,13 @@ switch what
         % rearrange
         for i=1:numRun
             tmp = getrow(T1,T1.numRun==i);
-        keyboard;
+            [indx,j,k] = pivottable([tmp.stimDir],[tmp.neuron],[tmp.spikeNum],'mean');
+            data(:,:,i) = indx;
         end
+        
+        acc=nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
+        keyboard;
+        % save new data, or submit directly to classifier
         
     case 'PLOT_corr'
         numNeuron=100;

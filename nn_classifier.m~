@@ -1,0 +1,24 @@
+function acc=nn_classifier(meanData,trialData,partVecTrial,condVecTrial,neuron); 
+    nPart = size(meanData,3);  % Partitions are the 3 dimension 
+    nCond = size (meanData,1); % Number of conditons 
+    part = [1:nPart]; 
+    for n=1:nPart 
+        trainIndx = find(part~=n); 
+        testIndx =  find(part==n); 
+        Mu_hat = mean(meanData(:,:,trainIndx),3); % Calculate the training means 
+        
+        % Now classify per trial for the left out run
+        % first reshape to have a trial x neuron for test
+        for t=1:length(unique(condVecTrial))
+            testData(t,:) = trialData(partVecTrial==testIndx & condVecTrial==t)';
+        end
+        for c=1:nCond 
+            
+            x = meanData(c,:,testIndx);  % This is the test pattern 
+            dist=x*x'-2*Mu_hat*x'+sum(Mu_hat.^2,2); 
+            [~,k(c,n)]=min(dist);  % Record the classification 
+        end; 
+    end; 
+    % Calculate the % correct 
+    correct=bsxfun(@eq,k,[1:nCond]');
+    acc = sum(correct(:))/numel(correct(:)); 
