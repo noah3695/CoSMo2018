@@ -121,7 +121,7 @@ switch what
         % plot stuff
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
-    case 'CALC_corr'
+    case 'CALC_corr_dprime'
         numNeuron = 100;
         numStim = 5;
         vararginoptions(varargin,{'numNeuron','numStim'});
@@ -146,9 +146,12 @@ switch what
         for i=1:numNeuron
             for j=i:numNeuron
                 D.corrMean      = corr(T1.spikeNum_mean(T1.neuron==i),T1.spikeNum_mean(T1.neuron==j));
-                %D.corrVar   = corr(T1.spikeNum_var(T1.neuron==i),T1.spikeNum_var(T1.neuron==j));
-                %D.corrVar   = corr(NN.spikeNum(NN.neuron==i),NN.spikeNum(NN.neuron==j));
                 D.corrVar       = corr(T2.spikeNum_var(T2.neuron==i),T2.spikeNum_var(T2.neuron==j));
+                for c=1:numStim
+                    t1=getrow(T,T.neuron==i & T.stimDir==c);
+                    t2=getrow(T,T.neuron==j & T.stimDir==c);
+                    D.dprime(1,c)=dprime(t1.spikeNum,t2.spikeNum);
+                end
                 D.neuron1       = i;
                 D.neuron2       = j;
                 D.sameNeuron    = double(i==j);
@@ -210,17 +213,6 @@ switch what
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
       
-    case 'CHOOSE_subset'
-        numNeuron = 100;
-        vararginoptions(varargin,{'numNeuron'});
-        
-        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
-        
-        % randsample one neuron, then take the most anticorrelated, then
-        % more anticorrelated neurons
-        [sortMean,indxMean]=sort(T.corrMean);
-        [sortVar,indxVar]=sort(T.corrVar);
-        keyboard;
         
     otherwise
         fprintf('No such case\n');
