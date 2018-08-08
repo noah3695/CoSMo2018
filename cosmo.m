@@ -17,7 +17,8 @@ switch what
         vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
-        prefDir = kron([1:numStim]',[ones(numNeuron/numStim,1)]);
+        %prefDir = kron([1:numStim]',[ones(numNeuron/numStim,1)]);
+        prefDir = randi(5,[100,1]);
         % organised preferred direction - pref: 1,2,...,numStim
         sigma   = abs(rand(numNeuron,1));
         %gIndep = abs(rand(numNeuron,1));
@@ -39,9 +40,9 @@ switch what
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),'tuning','prefDir','gIndep','tuneScale');
     case 'GEN_LIF'
         % define default parameters for LIFModel
-        gShared     = 0.05; % shared noise
-        gIndep      = 0.001; % independent noise
-        gAnat       = 0.03;
+        gShared     = 0.03; % shared noise
+        gIndep      = 0.02; % independent noise
+        gAnat       = 0.01;
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
@@ -55,11 +56,11 @@ switch what
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
-        anatVec = 1.5*exp(-([1:numNeuron]-round(numNeuron/2)).^2/(2*sigmaAnat.^2))+0.1;
+        anatVec = repmat([1; -1], numNeuron, 1);
         
         for t=1:numStim
             for r=1:numRep
-                gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
+                gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons      
                 Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
                 for n=1:numNeuron
                     % 1) determine spike rate based on tuning
@@ -67,24 +68,27 @@ switch what
                     % 2) generate spikes
                     [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                     % 3) add anatOff 
-                    anatOff = anatVec(n);
+                    anatOff = 0;
                     % 4) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron),gAnat,anatOff,dT,stimDur,plotOn);
+                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron)*0.05,gAnat,anatOff,dT,stimDur,plotOn);
                     %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
                     T.spikeNum  = numel(T.spikes{1});
                     T.neuron    = n;
                     T.prefDir   = D.prefDir(n);
                     T.stimDir   = t;
                     TT          = addstruct(TT,T);
+                    C{t}(r,n)=T.spikeNum;
                     clear spkVec spkRate spkInds;
                 end
                 fprintf('Generated all neurons for stimulus: %d/%d repetition %d/%d\n',t,numStim,r,numRep);  
             end
         end
+        figure;
         lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)),'-struct','TT');
+        save(fullfile(dataDir,sprintf('covariance_%dneurons_%dstim',numNeuron,numStim)),'C');
     case 'PLOT_population'
         % plot the population
         numNeuron = 100;
@@ -92,11 +96,13 @@ switch what
         vararginoptions(varargin,{'numNeuron','numStim'});
         
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+        load(fullfile(dataDir,sprintf('covariance_%dneurons_%dstim',numNeuron,numStim)));
+        
         for l=1:numStim
             legLab{l} = sprintf('stim-%d',l);
         end
         
-        % extract variance and mean
+        % extract variance and meTan
         T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
             {'spikeNum','var','name','spikeNum_var'});
         % plot responses in dependence of preferred - presented stimulus
