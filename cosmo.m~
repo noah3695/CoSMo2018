@@ -49,7 +49,8 @@ switch what
         numNeuron   = 100;
         sigmaAnat   = 15;
         numStim     = 5;
-        numRep      = 50;
+        numRun      = 5; 
+        numRep      = 50; % 10 repetitions per run, 50 overall
         spikeScale  = 30; % in Hz
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
@@ -167,6 +168,27 @@ switch what
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
+    case 'CALC_meanResponse'
+        numNeuron = 100;
+        numStim = 5;
+        numRun = 5;
+        numRep = 10; % per run
+        
+        vararginoptions(varargin,{'numNeuron','numStim'});
+        
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+     
+        % add partVec
+        T.partVec = repmat([1:5]',numNeuron*numStim*numRep,1);
+        T1=tapply(T,{'stimDir','partVec','neuron'},{'spikeNum','mean'});
+        
+        % rearrange
+        for i=1:numRun
+            tmp = getrow(T1,T1.partVec==i);
+            data{i}=pivottable
+        end
+        keyboard;
+        
     case 'PLOT_corr'
         numNeuron=100;
         vararginoptions(varargin,{'numNeuron'});
@@ -213,33 +235,6 @@ switch what
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
       
-    case 'CHOOSE_subset'
-        numNeuron = 100;
-        vararginoptions(varargin,{'numNeuron'});
-        
-        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
-        
-        % randsample one neuron, then take the most anticorrelated, then
-        % more anticorrelated neurons
-        [sortMean,indxMean]=sort(T.corrMean);
-        [sortVar,indxVar]=sort(T.corrVar);
-        keyboard;
-    case 'CALC_dprime'
-        numNeuron = 100;
-        numStim = 5;
-        vararginoptions(varargin,{'numNeuron','numStim'});
-        
-        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
-        
-        % here decide on neuron pair
-        indx1=1;
-        indx2=2;
-        for i=1:numStim
-            t1=getrow(T,T.neuron==indx1 & T.stimDir==i);
-            t2=getrow(T,T.neuron==indx2 & T.stimDir==i);
-            d(i)=dprime(t1.spikeNum,t2.spikeNum);
-        end
-       
         
     otherwise
         fprintf('No such case\n');

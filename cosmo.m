@@ -49,7 +49,8 @@ switch what
         numNeuron   = 100;
         sigmaAnat   = 15;
         numStim     = 5;
-        numRep      = 50;
+        numRun      = 7;  % 7 runs
+        numRep      = 10; % 10 repetitions per run, (70) overall
         spikeScale  = 30; % in Hz
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
@@ -59,28 +60,32 @@ switch what
         anatVec = repmat([1; -1], numNeuron, 1);
         
         for t=1:numStim
-            for r=1:numRep
-                gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons      
-                Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
-                for n=1:numNeuron
-                    % 1) determine spike rate based on tuning
-                    spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
-                    % 2) generate spikes
-                    [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
-                    % 3) add anatOff 
-                    anatOff = 0;
-                    % 4) run the LIFModel
-                    T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron)*0.05,gAnat,anatOff,dT,stimDur,plotOn);
-                    %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
-                    T.spikeNum  = numel(T.spikes{1});
-                    T.neuron    = n;
-                    T.prefDir   = D.prefDir(n);
-                    T.stimDir   = t;
-                    TT          = addstruct(TT,T);
-                    C{t}(r,n)=T.spikeNum;
-                    clear spkVec spkRate spkInds;
+            for r=1:numRun
+                for rep=1:numRep
+                    gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
+                    Sign=(randi([0,1],numNeuron,1)*2-1)*0.5; %positive or negative
+                    for n=1:numNeuron
+                        % 1) determine spike rate based on tuning
+                        spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
+                        % 2) generate spikes
+                        [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
+                        % 3) add anatOff
+                        anatOff = 0;
+                        % 4) run the LIFModel
+                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*Sign(numNeuron)*0.05,gAnat,anatOff,dT,stimDur,plotOn);
+                        %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
+                        T.spikeNum  = numel(T.spikes{1});
+                        T.neuron    = n;
+                        T.numRun    = r;
+                        T.numRep    = rep;
+                        T.prefDir   = D.prefDir(n);
+                        T.stimDir   = t;
+                        TT          = addstruct(TT,T);
+                        C{t}(r,n)=T.spikeNum;
+                        clear spkVec spkRate spkInds;
+                    end
                 end
-                fprintf('Generated all neurons for stimulus: %d/%d repetition %d/%d\n',t,numStim,r,numRep);  
+                fprintf('Generated all neurons for stimulus: %d/%d runs %d/%d\n',t,numStim,r,numRun);
             end
         end
         figure;
@@ -167,6 +172,27 @@ switch what
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
+    case 'CALC_meanResponse'
+        numNeuron = 100;
+        numStim = 5;
+        numRun = 5;
+        numRep = 10; % per run
+        
+        vararginoptions(varargin,{'numNeuron','numStim'});
+        
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+     
+        % add partVec
+        T.partVec = repmat([1:5]',numNeuron*numStim*numRep,1);
+        T1=tapply(T,{'stimDir','partVec','neuron'},{'spikeNum','mean'});
+        
+        % rearrange
+        for i=1:numRun
+            tmp = getrow(T1,T1.partVec==i);
+            data{i}=pivottable
+        end
+        keyboard;
+        
     case 'PLOT_corr'
         numNeuron=100;
         vararginoptions(varargin,{'numNeuron'});
