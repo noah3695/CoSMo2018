@@ -1,4 +1,4 @@
-function [FI_corr] = fisherInfo(dataDir,numNeuron,numRpts,numStim)
+function [FI_corr,pop_dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim)
 
 %% Sort spike counts into mat
 
@@ -85,6 +85,12 @@ FI_corr = nan(numStim,1);
 for i = 1:numStim
     FI_corr(i) = dTC_ds(:,i)' * corrMat * dTC_ds(:,i);
 end
+
+%% Get dprime for the population for a given pair of stimuli
+
+dprime = deltaStim*sqrt(FI_corr);
+
+
 
 
 end
