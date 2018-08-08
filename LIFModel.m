@@ -34,6 +34,8 @@ V_AHP = -0.080; % original -80
 numout = 0;
 spksOut = 0;
 
+anatNoise = poissrnd(1,[1,numel(t)-1])*gAnat*anatOff;
+
 for i = 2:numel(t)
     % Reset if previous timepoint spiked
     if V(i-1,1) >= Vthresh
@@ -45,7 +47,7 @@ for i = 2:numel(t)
     % current @t = current @t-1 - leak_channel + spike input*transfer fxn +
     % independent noise + shared noise
     V(i,1) = V(i-1,1) - (1/tau)*(V(i-1,1) - vRMP)*dT -0.006*(1/tau)*V(i-1,1)*spkVec(i-1) + ...
-        gIndep*randn(1) + gShared(i-1) + gAnat*(randn(1)+anatOff);
+        gIndep*randn(1) + gShared(i-1) + anatNoise(i-1);
     
     % Spike if threshold is reached
     if V(i,1) >= Vthresh
