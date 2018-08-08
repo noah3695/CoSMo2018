@@ -55,7 +55,8 @@ switch what
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
-        anatVec = 1.5*exp(-([1:numNeuron]-round(numNeuron/2)).^2/(2*sigmaAnat.^2))+0.1;
+        %anatVec = 1.5*exp(-([1:numNeuron]-round(numNeuron/2)).^2/(2*sigmaAnat.^2))+0.1;
+        anatVec = repmat([1; -1], numNeuron, 1);
         
         for t=1:numStim
             for r=1:numRep
