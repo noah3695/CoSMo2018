@@ -1,6 +1,6 @@
 function [] = fisherInfo()
 
-% Sort spike counts into mat
+%% Sort spike counts into mat
 
 numNeuron = 100;
 numRpts = 50;
@@ -16,7 +16,8 @@ for i = 1:numStim
     end
 end
 
-% Fit normal distribution to likelihood functions
+%% Fit normal distribution to likelihood functions p(spkCount|stim)
+% (to get I_fisher for population of independently firing neurons)
 
 normdist = @(x,sigma,mu,scale) (scale)*exp(-((x-mu).^2)./(2*sigma^2));
 dnorm_dx = @(x,sigma,mu,scale) ...
@@ -45,13 +46,16 @@ for i = 1:numStim
     end
 end
 
-% Get FI for each stimulus
+%% Get FI (in style of Zylberberg et al. '16, Hu et al. '14)
+% (to get I_fisher for population of correlated neurons)
 
-stim = 1;
+% Sort interneuronal correlations into square mat
+corrMat = nan(numNeurons,numNeurons);
 
-% Measure fisher information
-FI = @() 
+% Derivative of given neuron's TC about presented stimulus
+dTC_ds = 
 
+FI = dTC_ds' * corrMat * dTC_ds;
 
 
 
