@@ -1,10 +1,10 @@
-function [] = fisherInfo()
+function [FI_corr] = fisherInfo(dataDir,numNeuron,numRpts,numStim)
 
 %% Sort spike counts into mat
 
-numNeuron = 100;
-numRpts = 50;
-numStim = 5;
+% numNeuron = 100;
+% numRpts = 50;
+% numStim = 5;
 plotOn = 1;
 
 countMat = zeros(numNeuron,numRpts,numStim);
@@ -49,14 +49,42 @@ end
 %% Get FI (in style of Zylberberg et al. '16, Hu et al. '14)
 % (to get I_fisher for population of correlated neurons)
 
+% load in tuning curves and correlations
+load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
+load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
+load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+
+stims = 1:numStim;
+
 % Sort interneuronal correlations into square mat
-corrMat = nan(numNeurons,numNeurons);
+corrMat = nan(numNeuron,numNeuron);
+
+for i = 1:numNeuron
+    ends = find(neuron2 == numNeuron);
+    starts = [1;ends+1];
+    corrMat(i,i:end) = corrVar(starts(i):ends(i));
+    corrMat(i:end,i) = corrVar(starts(i):ends(i));
+end
 
 % Derivative of given neuron's TC about presented stimulus
-dTC_ds = 
+dTC_ds = nan(numNeuron,numStim);
 
-FI = dTC_ds' * corrMat * dTC_ds;
+for i = 1:numStim
+    for j = 1:numNeuron
+        sig = sigma(j);
+        mu = prefDir(j);
+        scale = scale;  % for future if scale randomized
+        
+        dTC_ds(j,i) = dnorm_dx(stims,sig,mu,scale);
+    end
+end
 
+% Calculate Fisher information for a given stimulus
+FI_corr = nan(numStim,1);
+
+for i = 1:numStim
+    FI_corr(i) = dTC_ds(:,i)' * corrMat * dTC_ds(:,i);
+end
 
 
 end
