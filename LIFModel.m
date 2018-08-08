@@ -1,4 +1,4 @@
-function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,gAnat,anatOff,dT,stimDur,plotOn)
+function [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,gAnat,anatSign,dT,stimDur,plotOn)
 % Leaky integrate and Fire Model
 % Usage: [spksOut,V] = LIFModel(spkInds,spkVec,gShared,gIndep,gAnat,anatOff,dT,stimDur,plotOn)
 %        [spksOut] = LIFModel([spkTimes],[0101...],0.002,0.002,0.002,0.001,0.001,1,1)
@@ -34,7 +34,7 @@ V_AHP = -0.080; % original -80
 numout = 0;
 spksOut = 0;
 
-anatNoise = poissrnd(1,[1,numel(t)-1])*gAnat*anatOff;
+anatNoise = poissrnd(1,[1,numel(t)-1])*gAnat*anatSign;
 
 for i = 2:numel(t)
     % Reset if previous timepoint spiked
