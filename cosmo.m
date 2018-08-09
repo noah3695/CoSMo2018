@@ -15,7 +15,7 @@ switch what
         
         % determine preferred tuning and variance per neuron
         prefDir = randi(5,[numNeuron,1]);
-        sigma   = 3.5*rand(numNeuron,1)+0.5;     % 0.4 former
+        sigma   = 7*rand(numNeuron,1)+0.5;     % 0.4 former
         scale   = rand([numNeuron,1]);           % 1 former
         offset  = rand([numNeuron,1]);           % 0.5 former
         
@@ -57,6 +57,8 @@ switch what
         numRun      = 8;  % 8 runs
         numRep      = 10; % 10 repetitions per run, (80) overall
         spikeScale  = 80; % in Hz
+        TC = @(scale,stim,prefDir,sigma,offset)...
+                scale * exp(-((stim-prefDir).^2)./sigma) + offset;     
         popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
@@ -75,7 +77,9 @@ switch what
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning
-                        spkRate = D.tuning(n,t)*spikeScale;
+                        tuning = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
+                        spkRate = tuning*spikeScale;
+                        
                         % 2) generate spikes
                         [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                         % 3) add anatOff
@@ -200,10 +204,10 @@ switch what
         end
         % submit to classifier, distance calculation
         acc = nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
-        dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
-        % plot distances
-        figure
-        imagesc(rsa_squareRDM(dist));
+%         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
+%         % plot distances
+%         figure
+%         imagesc(rsa_squareRDM(dist));
         keyboard;
         % save new data, or submit directly to classifier
         
