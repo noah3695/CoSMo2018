@@ -10,31 +10,36 @@ switch what
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
         numNeuron = 100; % number of neurons altogether
         numStim   = 5;
-        sigma     = 0.4;
-        scale     = 1; % scaling function
-        offset    = 0.5;
         plotFig   = 1;
         vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
-        %prefDir = kron([1:numStim]',[ones(numNeuron/numStim,1)]);
-        prefDir = randi(5,[100,1]);
+        prefDir = randi(5,[numNeuron,1]);
+        sigma   = 3.5*rand(numNeuron,1)+0.5;     % 0.4 former
+        scale   = rand([numNeuron,1]);           % 1 former
+        offset  = rand([numNeuron,1]);           % 0.5 former
+        
         % organised preferred direction - pref: 1,2,...,numStim
-        sigma   = abs(rand(numNeuron,1));
-        %gIndep = abs(rand(numNeuron,1));
-       % tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
-        tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
-        tuning = bsxfun(@rdivide,tuning,max(tuning,[],2));
-        tuning = bsxfun(@minus,tuning,rand(numNeuron,1)/2);
-       % gIndep = tuning.*1.5;
+        for i = 1:numNeuron
+            tuning(i,:) = ...
+                scale(i) * exp(-(([1:numStim]-prefDir(i)).^2)./sigma(i)) + offset(i);
+        end
+        
+        rescale = max(tuning);
+        tuning = tuning./rescale;
+        scale = scale./rescale;
+        
+%         gIndep = tuning.*1.5;
+
         if plotFig==1 % optional plotting of tuning functions across neurons
-            figure
+            figure;
             hold on;
             for i=1:numStim
                 subplot(1,numStim,i)
                 plot([1:numStim],tuning(prefDir==i,:));
             end
         end
+        
         %varargout{1}=tuning;
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
@@ -42,7 +47,7 @@ switch what
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.003; % shared noise
-        gIndep      = 0.005; % independent noise
+        gIndep      = 0.008; % independent noise
         gAnat       = 0.001;
         plotOn      = 0;
         stimDur     = 2; % in seconds
@@ -77,7 +82,7 @@ switch what
                         anatSign = anatVec(n);
                         % 4) run the LIFModel
                         %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,0,gAnat,anatSign,dT,stimDur,plotOn);
-                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.sigma(n)*gIndep,gAnat,anatSign,dT,stimDur,plotOn);
+                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,gAnat,anatSign,dT,stimDur,plotOn);
                         T.spikeNum  = numel(T.spikes{1});
                         T.neuron    = n;
                         T.numRun    = r;
