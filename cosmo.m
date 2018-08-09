@@ -1,5 +1,5 @@
 function varargout = cosmo(what,varargin)
-
+%hello world
 % Define common stuff here
 baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
