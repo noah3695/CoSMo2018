@@ -4,12 +4,14 @@ function varargout = cosmo(what,varargin)
 baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
 
-stimLow = 1;
-stimHigh = 5;
-dStim = 0.25;
-stims = stimLow:dStim:stimHigh;
-numStim = numel(stims);
-numNeuron = 100;    % number of neurons altogether
+stimLow     = 1;    % Define stimulus range
+stimHigh    = 5;
+dStim       = 0.25; % define stimulus steps
+stims       = stimLow:dStim:stimHigh;
+numStim     = numel(stims);
+numNeuron   = 100;    % number of neurons altogether
+numRun      = 8;  % 8 runs
+numRep      = 10; % 10 repetitions per run, (80) overall
 
 switch what
     case 'GEN_tunedPopulation'
@@ -23,7 +25,7 @@ switch what
         prefDir = randi(5,[numNeuron,1]);
         sigma   = 7*rand(numNeuron,1)+0.5;     % 0.4 former
         scale   = rand([numNeuron,1]);           % 1 former
-        offset  = rand([numNeuron,1]);           % 0.5 former
+        offset  = rand([numNeuron,1])*0.75 + 0.5;           % 0.5 former
         
         % organised preferred direction - pref: 1,2,...,numPrefs
         TC = @(scale,stim,prefDir,sigma,offset)...
@@ -87,7 +89,7 @@ switch what
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning (pull
                         % from params
-                        resp = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
+                        resp = TC(D.scale(n),stims(t),D.prefDir(n),D.sigma(n),D.offset(n));
 %                         resp = D.tuning(n,t);
                         spkRate = resp*spikeScale;
                         
@@ -262,6 +264,9 @@ switch what
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
       
+    case 'CALC_fisherInfo'
+        numRpts = numrun*numRep;
+%         [FI_corr,pop_dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim);
         
     otherwise
         fprintf('No such case\n');
