@@ -4,13 +4,25 @@ function varargout = cosmo(what,varargin)
 baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
 
+stimLow = 1;
+stimHigh = 5;
+dStim = 0.25;
+stims = stimLow:dStim:stimHigh;
+numStim = numel(stims);
+numNeuron = 100;    % number of neurons altogether
+
 switch what
     case 'GEN_tunedPopulation'
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
-        numNeuron = 100; % number of neurons altogether
-        numPrefs   = 5;
+%         numNeuron = 100; % number of neurons altogether
+        numPrefs  = 5;
         plotFig   = 1;
+%         stimLow   = 1;
+%         stimHigh  = 5;
+%         dStim     = 0.25;
+%         stims     = stimLow:dStim:stimHigh;
+%         numStim   = numel(stims);
         vararginoptions(varargin,{'numNeuron','numPrefs','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
@@ -22,19 +34,15 @@ switch what
         % organised preferred direction - pref: 1,2,...,numPrefs
         TC = @(scale,stim,prefDir,sigma,offset)...
                 scale .* exp(-((stim-prefDir).^2)./sigma) + offset;
-        stims = 1:0.25:5;
         
         for i = 1:numNeuron
-            tuning(i,:) = TC(scale(i),stims,prefDir(i),sigma(i),offset(i));...
-%                 scale(i) * exp(-(([1:numPrefs]-prefDir(i)).^2)./sigma(i)) + offset(i);
+            tuning(i,:) = TC(scale(i),stims,prefDir(i),sigma(i),offset(i));
         end
         
         rescale = max(max(tuning));
         tuning = tuning./rescale;
-        scale = scale./rescale;
         
 %         gIndep = tuning.*1.5;
-          
 
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure;
@@ -42,13 +50,14 @@ switch what
             for i=1:numPrefs
                 inds = prefDir==i;
                 subplot(1,numPrefs,i)
-                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
+%                 plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
+                plot(stims,tuning(inds,:));
             end
         end
         
         %varargout{1}=tuning;
-        % save the tuning matrix (numNeuron x numPrefs)
-        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numPrefs)),...
+        % save the tuning matrix (numNeuron x numStim)
+        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
             'tuning','prefDir','sigma','scale','offset');
     case 'GEN_LIF'
         % define default parameters for LIFModel
@@ -59,11 +68,11 @@ switch what
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 100;
-        StimLow     = 1;
-        StimHigh    = 5;
-        dstim       = 0.25;
-        stims       = StimLow:dstim:StimHigh;
-        numStim     = (StimHigh-StimLow)/dstim;
+%         StimLow     = 1;
+%         StimHigh    = 5;
+%         dstim       = 0.25;
+%         stims       = StimLow:dstim:StimHigh;
+%         numStim     = numel(stims);
         numRun      = 8;  % 8 runs
         numRep      = 10; % 10 repetitions per run, (80) overall
         spikeScale  = 80; % in Hz
@@ -88,7 +97,7 @@ switch what
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning
 %                         tuning = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
-                        resp = tuning(n,t);
+                        resp = D.tuning(n,t);
                         spkRate = resp*spikeScale;
                         
                         % 2) generate spikes
@@ -120,7 +129,7 @@ switch what
     case 'PLOT_population'
         % plot the population
         numNeuron = 100;
-        numStim = 5;
+%         numStim = 5;
         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
@@ -151,7 +160,7 @@ switch what
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
     case 'CALC_corr_dprime'
         numNeuron = 100;
-        numStim = 5;
+%         numStim = 5;
         popType = 'mixture';
 
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
@@ -199,7 +208,7 @@ switch what
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     case 'CALC_classify'   
         numNeuron = 100;
-        numStim = 5;
+%         numStim = 5;
         numRun = 8;
         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
