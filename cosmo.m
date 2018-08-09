@@ -9,9 +9,9 @@ switch what
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
         numNeuron = 100; % number of neurons altogether
-        numStim   = 5;
+        numPrefs   = 5;
         plotFig   = 1;
-        vararginoptions(varargin,{'numNeuron','numStim','plotFig','scale','offset','sigma'});
+        vararginoptions(varargin,{'numNeuron','numPrefs','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
         prefDir = randi(5,[numNeuron,1]);
@@ -19,30 +19,36 @@ switch what
         scale   = rand([numNeuron,1]);           % 1 former
         offset  = rand([numNeuron,1]);           % 0.5 former
         
-        % organised preferred direction - pref: 1,2,...,numStim
+        % organised preferred direction - pref: 1,2,...,numPrefs
+        TC = @(scale,stim,prefDir,sigma,offset)...
+                scale .* exp(-((stim-prefDir).^2)./sigma) + offset;
+        stims = 1:0.25:5;
+        
         for i = 1:numNeuron
-            tuning(i,:) = ...
-                scale(i) * exp(-(([1:numStim]-prefDir(i)).^2)./sigma(i)) + offset(i);
+            tuning(i,:) = TC(scale(i),stims,prefDir(i),sigma(i),offset(i));...
+%                 scale(i) * exp(-(([1:numPrefs]-prefDir(i)).^2)./sigma(i)) + offset(i);
         end
         
-        rescale = max(tuning);
+        rescale = max(max(tuning));
         tuning = tuning./rescale;
         scale = scale./rescale;
         
 %         gIndep = tuning.*1.5;
+          
 
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure;
             hold on;
-            for i=1:numStim
-                subplot(1,numStim,i)
-                plot([1:numStim],tuning(prefDir==i,:));
+            for i=1:numPrefs
+                inds = prefDir==i;
+                subplot(1,numPrefs,i)
+                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
             end
         end
         
         %varargout{1}=tuning;
-        % save the tuning matrix (numNeuron x numStim)
-        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
+        % save the tuning matrix (numNeuron x numPrefs)
+        save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numPrefs)),...
             'tuning','prefDir','sigma','scale','offset');
     case 'GEN_LIF'
         % define default parameters for LIFModel
@@ -53,7 +59,11 @@ switch what
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 100;
-        numStim     = 5;
+        StimLow     = 1;
+        StimHigh    = 5;
+        dstim       = 0.25;
+        stims       = StimLow:dstim:StimHigh;
+        numStim     = (StimHigh-StimLow)/dstim;
         numRun      = 8;  % 8 runs
         numRep      = 10; % 10 repetitions per run, (80) overall
         spikeScale  = 80; % in Hz
@@ -77,8 +87,9 @@ switch what
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning
-                        tuning = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
-                        spkRate = tuning*spikeScale;
+%                         tuning = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
+                        resp = tuning(n,t);
+                        spkRate = resp*spikeScale;
                         
                         % 2) generate spikes
                         [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
@@ -92,7 +103,7 @@ switch what
                         T.numRun    = r;
                         T.numRep    = rep;
                         T.prefDir   = D.prefDir(n);
-                        T.stimDir   = t;
+                        T.stimDir   = stims(t);
                         T.anatSign  = anatSign;
                         TT          = addstruct(TT,T);
                         clear spkVec spkRate spkInds;
