@@ -71,7 +71,7 @@ switch what
                 scale * exp(-((stim-prefDir).^2)./sigma) + offset; 
             
         popType = 'mixture';
-        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
+        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale','popType'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
@@ -80,7 +80,7 @@ switch what
             case 'mixture'
                 anatVec = repmat([1; -1],numNeuron,1);
             case 'positive'
-                anatVec = repmat([1; -1],numNeuron,1);     
+                anatVec = repmat([1; 1],numNeuron,1);     
         end    
         for t=1:numStim
             for r=1:numRun
@@ -129,6 +129,9 @@ switch what
         for l=1:numStim
             legLab{l} = sprintf('stim-%d',l);
         end
+        figure
+        plt.hist(T.spikeNum,'split',T.prefDir);
+        ylabel('number of spikes');
         
         % extract variance and mean
         T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
@@ -136,14 +139,20 @@ switch what
         % plot responses in dependence of preferred - presented stimulus
         figure(1)
         subplot(1,2,1)
-        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
-                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        %lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
+        %        'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
+                'leg',legLab,'markertype','o','markersize',12);
+      
         xlabel('Preferred-presented stimulus');
         ylabel('Mean spike number response');
         subplot(1,2,2)
         % calculate the variance
-        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
-                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+      %  lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+       %     'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+            'leg',legLab,'markertype','o','markersize',12);
+        
         ylabel('Variance in spike number across trials');
         
         % plot stuff
@@ -185,9 +194,13 @@ switch what
                 D.sameNeuron    = double(i==j);
                 pref1           = T1.prefDir(T1.neuron==i);
                 pref2           = T1.prefDir(T1.neuron==j);
+                anat1           = T.anatSign(T.neuron==i);
+                anat2           = T.anatSign(T.neuron==i);
                 D.prefDir1      = pref1(1);
                 D.prefDir2      = pref2(1);
                 D.prefSame      = double(D.prefDir1==D.prefDir2);
+                D.anatSign1     = anat1(1);
+                D.anatSign2     = anat2(1);
                 DD = addstruct(DD,D);
                 Rm(i,j)=D.corrMean;
                 Rv(i,j)=D.corrVar;
@@ -236,7 +249,7 @@ switch what
         figure
         subplot(1,3,1)
         imagesc(M_mean);
-        title('Signal correlation across neuron pairs');
+        title(sprintf('Signal correlation across neuron pairs - %s population',popType));
         subplot(1,3,2)
         imagesc(M_var);
         title('Noise correlation across neuron pairs');
@@ -248,7 +261,7 @@ switch what
         subplot(2,2,1)
         plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==0);
         xlabel('Signal correlation'); ylabel('Noise correlation');
-        title('Neurons with diff preferred direction');
+        title(sprintf('Neurons with diff preferred direction - %s population',popType));
         subplot(2,2,2)
         plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==1);
         xlabel('Signal correlation'); ylabel('Noise correlation');
