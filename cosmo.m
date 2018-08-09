@@ -25,8 +25,8 @@ switch what
        % tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = bsxfun(@rdivide,tuning,max(tuning,[],2));
-        gIndep = tuning.*1.5;
-        tuneScale = abs(randn(numNeuron,1));
+        tuning = bsxfun(@minus,tuning,rand(numNeuron,1)/2);
+       % gIndep = tuning.*1.5;
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure
             hold on;
@@ -38,7 +38,7 @@ switch what
         %varargout{1}=tuning;
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
-            'tuning','prefDir','gIndep','tuneScale','predDir','sigma','scale','offset');
+            'tuning','prefDir','sigma','scale','offset');
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.003; % shared noise
@@ -51,7 +51,7 @@ switch what
         numStim     = 5;
         numRun      = 7;  % 7 runs
         numRep      = 10; % 10 repetitions per run, (70) overall
-        spikeScale  = 30; % in Hz
+        spikeScale  = 80; % in Hz
         popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
         
@@ -60,25 +60,24 @@ switch what
         D = load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
         switch popType
             case 'mixture'
-                anatVec = repmat([1; -1], numNeuron, 1);
+                anatVec = repmat([1; -1],numNeuron,1);
             case 'positive'
-                anatVec = repmat([1; -1], numNeuron, 1);     
-        end
-        
+                anatVec = repmat([1; -1],numNeuron,1);     
+        end    
         for t=1:numStim
             for r=1:numRun
                 for rep=1:numRep
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
                     for n=1:numNeuron
                         % 1) determine spike rate based on tuning
-                        spkRate = D.tuning(n,t)*spikeScale*D.tuneScale(n);
+                        spkRate = D.tuning(n,t)*spikeScale;
                         % 2) generate spikes
                         [spkInds,spkVec] = genSpikes(stimDur,spkRate,dT);
                         % 3) add anatOff
                         anatSign = anatVec(n);
                         % 4) run the LIFModel
-                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.gIndep(n,t)*gIndep,gAnat,anatSign,dT,stimDur,plotOn);
-                        %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,dT,stimDur,plotOn);
+                        %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,0,gAnat,anatSign,dT,stimDur,plotOn);
+                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.sigma(n)*gIndep,gAnat,anatSign,dT,stimDur,plotOn);
                         T.spikeNum  = numel(T.spikes{1});
                         T.neuron    = n;
                         T.numRun    = r;
@@ -97,16 +96,15 @@ switch what
         lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
-        save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)),'-struct','TT');
-        save(fullfile(dataDir,sprintf('covariance_%dneurons_%dstim',numNeuron,numStim)),'C');
+        save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)),'-struct','TT');
     case 'PLOT_population'
         % plot the population
         numNeuron = 100;
         numStim = 5;
-        vararginoptions(varargin,{'numNeuron','numStim'});
+        popType = 'mixture';
+        vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
-        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
-        load(fullfile(dataDir,sprintf('covariance_%dneurons_%dstim',numNeuron,numStim)));
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
         
         for l=1:numStim
             legLab{l} = sprintf('stim-%d',l);
@@ -134,9 +132,11 @@ switch what
     case 'CALC_corr_dprime'
         numNeuron = 100;
         numStim = 5;
-        vararginoptions(varargin,{'numNeuron','numStim'});
+        popType = 'mixture';
+
+        vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
-        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
         % extract variance and mean
         T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
             {'spikeNum','var','name','spikeNum_var'});
@@ -176,14 +176,14 @@ switch what
             end
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
-        save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)),'-struct','DD'); 
+        save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     case 'CALC_classify'   
         numNeuron = 100;
         numStim = 5;
         numRun = 7;
-        
-        vararginoptions(varargin,{'numNeuron','numStim'});        
-        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim',numNeuron,numStim)));
+        popType = 'mixed';
+        vararginoptions(varargin,{'numNeuron','numStim','popType'});        
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
      
         % add partVec
         T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
@@ -204,8 +204,9 @@ switch what
         
     case 'PLOT_corr'
         numNeuron=100;
-        vararginoptions(varargin,{'numNeuron'});
-        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons',numNeuron)));
+        popType='mixture';
+        vararginoptions(varargin,{'numNeuron','popType'});
+        T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)));
       
         figure
         scatterplot(T.corrMean,T.corrVar,'split',T.prefSame,'leg',{'tuning different','tuning same'},'subset',T.sameNeuron==0);
@@ -230,20 +231,20 @@ switch what
             
         figure
         subplot(2,2,1)
-        scatterplot(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==0);
+        plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==0);
         xlabel('Signal correlation'); ylabel('Noise correlation');
         title('Neurons with diff preferred direction');
         subplot(2,2,2)
-        scatterplot(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==1);
+        plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==1);
         xlabel('Signal correlation'); ylabel('Noise correlation');
         title('Neurons with same preferred direction');
         subplot(2,2,3)
-        histplot(T.corrMean,'subset',T.sameNeuron==0);
+        plt.hist(T.corrMean,'subset',T.sameNeuron==0);
         hold on;
         drawline(mean(T.corrMean(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of signal correlation');
         subplot(2,2,4)
-        histplot(T.corrVar,'subset',T.sameNeuron==0);
+        plt.hist(T.corrVar,'subset',T.sameNeuron==0);
         hold on;
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
