@@ -25,7 +25,7 @@ switch what
        % tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = (scale*exp(-([1:numStim]-prefDir).^2)./(2*sigma.^2))+offset;
         tuning = bsxfun(@rdivide,tuning,max(tuning,[],2));
-        tuning = bsxfun(@minus,tuning,rand(numNeuron,1)/2);
+        tuning = abs(bsxfun(@minus,tuning,abs(rand(numNeuron,1))));
        % gIndep = tuning.*1.5;
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure
@@ -42,15 +42,15 @@ switch what
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.003; % shared noise
-        gIndep      = 0.005; % independent noise
+        gIndep      = 0.008; % independent noise
         gAnat       = 0.001;
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
         numNeuron   = 100;
         numStim     = 5;
-        numRun      = 7;  % 7 runs
-        numRep      = 10; % 10 repetitions per run, (70) overall
+        numRun      = 8;  % 8 runs
+        numRep      = 10; % 10 repetitions per run, (80) overall
         spikeScale  = 80; % in Hz
         popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
@@ -77,7 +77,7 @@ switch what
                         anatSign = anatVec(n);
                         % 4) run the LIFModel
                         %T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,0,gAnat,anatSign,dT,stimDur,plotOn);
-                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,D.sigma(n)*gIndep,gAnat,anatSign,dT,stimDur,plotOn);
+                        T.spikes{1} = LIFModel(spkInds,spkVec,gSharedVec,gIndep,gAnat,anatSign,dT,stimDur,plotOn);
                         T.spikeNum  = numel(T.spikes{1});
                         T.neuron    = n;
                         T.numRun    = r;
@@ -180,8 +180,8 @@ switch what
     case 'CALC_classify'   
         numNeuron = 100;
         numStim = 5;
-        numRun = 7;
-        popType = 'mixed';
+        numRun = 8;
+        popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
      
