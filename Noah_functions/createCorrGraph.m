@@ -2,12 +2,17 @@ function [] = createCorrGraph(subplotNum, T1, T2, Neuron1, Neuron2, numStim)
 %% Is run to create correlation graphs between Neuron1 and Neuron2
 % Run these in the following order to run this function:
 % cosmo('CALC_classify'); 
+% --- A more streamline version ---
+% [T1,T2, N1, N2, numStim] = findNeuron(t, estimate);
+% createCorrGraph(i, T1, T2, N1, N2, numStim)
+
+% ---- A less simplified version ----
 % N1=21; N2=59; %or any 2 neurons you want
 % T1=getrow(T,T.neuron==N1);
 % T2=getrow(T,T.neuron==N2);
 % createCorrGraph(i, T1, T2, N1, N2, numStim)
-
-close all
+figure %create new figure for this magic that's about to happen
+%close all
 numTrials = length(T1.spikeNum) / numStim;  
 
 % make vector of indices
@@ -22,7 +27,7 @@ numTrials = length(T1.spikeNum) / numStim;
 % c = [];
 % c(1,:) = [0 171 75] / 255;
 % c(2,:) = [0 126 200] / 255;
-% c(3,:) = [238 186 13] / 255;
+c(3,:) = [238 186 13] / 255;
 % c(4,:) = [213 82 75] / 255;
 % c(5,:) = [109 103 110] / 255;
 % colors = [];
@@ -36,6 +41,7 @@ numTrials = length(T1.spikeNum) / numStim;
 prefDir1 = T1.prefDir(1);
 prefDir2 = T2.prefDir(1);
 prefDirs = [prefDir1 prefDir2];
+if prefDirs(1) > prefDirs(2); prefDirs = [prefDir2 prefDir1]; end;
 numStim = 2;
 c = [];
 % c(1,:) = [0 171 75] / 255;
@@ -57,7 +63,7 @@ scatter(T1.spikeNum(goodTrials==1) ,T2.spikeNum(goodTrials==1), dotSize ,colors,
 hold on
 
 
-hFig = figure(1);
+hFig = figure(get(gcf,'Number'));
 
 for k=1:numStim %for each stimulus group
     %# indices of points in this group
@@ -78,8 +84,8 @@ xinfo = xlim;
 yinfo = ylim;
 
 %create equal axis for x and y
-if xinfo(2) > yinfo(2); yinfo(2) = xinfo(2); else; xinfo(2) = yinfo(2); end;
-if xinfo(1) > yinfo(1); yinfo(1) = xinfo(1); else; xinfo(1) = yinfo(1); end;
+%if xinfo(2) > yinfo(2); yinfo(2) = xinfo(2); else; xinfo(2) = yinfo(2); end;
+%if xinfo(1) > yinfo(1); yinfo(1) = xinfo(1); else; xinfo(1) = yinfo(1); end;
 
 %create legend before drawPublishAxis artifically
 for i = 1:numStim
@@ -103,4 +109,5 @@ drawPublishAxis('xLabel', xLab, ...
     'yLabel', yLab, ...
     'titleStr', 'Correlation Comparison', 'labelFontSize', 20, ...
     'xTick',[xinfo(1) xinfo(2)], 'yTick',[yinfo(1) yinfo(2)]);
-keyboard
+
+
