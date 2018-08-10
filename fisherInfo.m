@@ -1,58 +1,70 @@
 function [FI_corr,dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims)
+% Calculates Fisher information for a population of independently firing
+% neurons and for correlated populations
+%
+% Usage: [FI_corr,dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims)
+%        [FI_corr,dprime] = fisherInfo(dataDir,1000,80,17,[1,1.25,...])
+
+
+%% Load in tuning curves and correlations
+load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
+load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)));
+load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
 
 %% Sort spike counts into mat
 
-% numNeuron = 100;
-% numRpts = 50;
-% numStim = 5;
 plotOn = 1;
 
-% countMat = zeros(numNeuron,numRpts,numStim);
-% 
-% for i = 1:numStim
-%     for j = 1:numNeuron 
-%         inds = and(neuron==j,stimDir==i);
-%         countMat(j,:,i) = spikeNum(inds);
-%     end
-% end
-% 
-% %% Fit normal distribution to likelihood functions p(spkCount|stim)
-% % (to get I_fisher for population of independently firing neurons)
-% 
-normdist = @(x,sigma,mu,scale) (scale)*exp(-((x-mu).^2)./(2*sigma^2));
+countMat = zeros(numNeuron,numRpts,numStim);
+
+for i = 1:numStim
+    for j = 1:numNeuron 
+        inds = and(neuron==j,stimDir==stims(i));
+        countMat(j,:,i) = spikeNum(inds);
+    end
+end
+
+%% Fit normal distribution to likelihood functions p(spkCount|stim)
+% (to get I_fisher for population of independently firing neurons)
+
+normdist = @(x,sigma,mu,scale) (scale)*exp(-((x-mu).^2)./(sigma));
 dnorm_dx = @(x,sigma,mu,scale) ...
     -(scale/sigma) .* 2*(x-mu) .* exp(-((x-mu).^2)./sigma);
-% 
-% bestPar = nan(numNeuron,3,numStim);
-% 
-% for i = 1:numStim
-%     for j = 1:numNeuron
-%         [counts,edges] = histcounts(countMat(j,:,i));
-%         pCount = counts/sum(counts);
-%         binSize = (edges(2)-edges(1));
-%         vals = binSize/2+edges(1):binSize:binSize*numel(pCount)+edges(1);
-%         
-%         [bestPar(j,:,i),~] = fminsearch(@fitnormal,[std(vals) mean(vals),max(pCount)],[],vals,pCount);
-%         
-%         if i==1 && j==1 && plotOn
-%             figure;hold on;
-%             scatter(vals,pCount);
-%             plot(vals(1):0.01:vals(end),...
-%                 normdist(vals(1):0.01:vals(end),bestPar(j,1,i),bestPar(j,2,i),bestPar(j,3,i)));
-%             
-%             plot(vals(1):0.01:vals(end),...
-%                 dnorm_dx(vals(1):0.01:vals(end),bestPar(j,1,i),bestPar(j,2,i),bestPar(j,3,i)));
-%         end
-%     end
-% end
+
+bestPar = nan(numNeuron,3,numStim);
+
+for i = 1:numStim
+    for j = 1:numNeuron
+        [counts,edges] = histcounts(countMat(j,:,i),10);
+        pCount = counts/sum(counts);
+        binSize = (edges(2)-edges(1));
+        vals = binSize/2+edges(1):binSize:binSize*numel(pCount)+edges(1);
+        
+        [bestPar(j,:,i),~] = fminsearch(@fitnormal,[std(vals) mean(vals),max(pCount)],[],vals,pCount);
+        
+        if i==1 && j==1 && plotOn
+            figure;hold on;
+            set(gca,'YLim',[0,1],'XLim',[60 120]);
+            bar(vals,pCount);
+            plot(vals(1):0.01:vals(end),...
+                normdist(vals(1):0.01:vals(end),bestPar(j,1,i),bestPar(j,2,i),bestPar(j,3,i)));
+            
+            plot(vals(1):0.01:vals(end),...
+                dnorm_dx(vals(1):0.01:vals(end),bestPar(j,1,i),bestPar(j,2,i),bestPar(j,3,i)));
+            text(vals(2),0.7,['sigma:',num2str(bestPar(j,1,i)),...
+                ', mu:',num2str(bestPar(j,2,i)),', scale:',num2str(bestPar(j,3,i))]);
+        end
+    end
+end
+
+
+
+
+
+% keyboard;
 
 %% Get FI (in style of Zylberberg et al. '16, Hu et al. '14)
 % (to get I_fisher for population of correlated neurons)
-
-% load in tuning curves and correlations
-load(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)));
-load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_mixturePopulation',numNeuron)));
-load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_mixturePopulation',numNeuron,numStim)));
 
 % Sort interneuronal correlations into square mat
 corrMat = nan(numNeuron,numNeuron);
@@ -85,7 +97,16 @@ dStim = stims(2)-stims(1);
 
 dprime = dStim.*sqrt(FI_corr);
 
+figure;
+bar(stims,dprime);
+ylabel(['d',char(39),' (AU)']);
+xlabel('Stimulus (AU)');
 
+%% get entropy of the stimulus
+
+pStim = 1/numStim;
+
+entStim = -sum(pStim*log(pStim));
 
 
 end
