@@ -214,7 +214,7 @@ switch what
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     
     case 'CALC_classify'   
-        nNeuron=48;
+%         nNeuron=48;
         
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
