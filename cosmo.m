@@ -304,9 +304,13 @@ switch what
         title('Distribution of noise correlation'); 
 
     case 'CALC_fisherInfo'
+        popType = 'mixture';
         numRpts = numRun*numRep;
-        [FI_corr,dprimo] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims);
-
+        
+        [FI_corr,dprimo] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims,popType);
+        
+        save(fullfile(dataDir,sprintf('fisher_%dneurons_%dstim_%sPopulation',...
+            numNeuron,numStim,popType)),'FI_corr','dprimo');
     otherwise
         fprintf('No such case\n');
 

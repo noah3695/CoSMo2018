@@ -1,4 +1,4 @@
-function [FI_corr,dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims)
+function [FI_corr,dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims,popType)
 % Calculates Fisher information for a population of independently firing
 % neurons and for correlated populations
 %
