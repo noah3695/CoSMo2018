@@ -133,7 +133,7 @@ switch what
             legLab{l} = sprintf('stim-%d',l);
         end
         figure
-        plt.hist(T.spikeNum,'split',T.prefDir);
+%         plt.hist(T.spikeNum,'split',T.prefDir);
         ylabel('number of spikes');
         
         % extract variance and mean
@@ -153,8 +153,8 @@ switch what
         % calculate the variance
       %  lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
        %     'leg',legLab,'style_thickline','markertype','o','markersize',12);
-        plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
-            'leg',legLab,'markertype','o','markersize',12);
+%         plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+%             'leg',legLab,'markertype','o','markersize',12);
         
         ylabel('Variance in spike number across trials');
         

@@ -89,7 +89,8 @@ end
 FI_corr = nan(numStim,1);
 
 for i = 1:numStim
-    FI_corr(i) = dTC_ds(:,i)' * corrMat * dTC_ds(:,i);
+%     FI_corr(i) = dTC_ds(:,i)' * inv(corrMat) * dTC_ds(:,i);
+    FI_corr(i) = dTC_ds(:,i)' / corrMat \ dTC_ds(:,i);
 end
 
 %% Get dprime for the population for a given pair of stimuli
