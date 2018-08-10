@@ -13,6 +13,8 @@ numNeuron   = 1000;    % number of neurons altogether
 numRun      = 8;  % 8 runs
 numRep      = 10; % 10 repetitions per run, (80) overall
 
+popType = 'negative';
+
 switch what
     case 'GEN_tunedPopulation'
         % generate tuning population of neurons
@@ -69,7 +71,7 @@ switch what
         TC = @(scale,stim,prefDir,sigma,offset)...
                 scale * exp(-((stim-prefDir).^2)./sigma) + offset; 
             
-        popType = 'mixture';
+%         popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale','popType'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
@@ -122,7 +124,7 @@ switch what
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)),'-struct','TT');
     case 'PLOT_population'
         % plot the population
-        popType = 'mixture';
+%         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
@@ -160,7 +162,7 @@ switch what
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
     case 'CALC_corr_dprime'
-        popType = 'mixture';
+%         popType = 'mixture';
 
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
@@ -210,7 +212,7 @@ switch what
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     case 'CALC_classify'   
-        popType = 'mixture';
+%         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
         
@@ -258,7 +260,7 @@ switch what
         % save classifier results
         
     case 'PLOT_corr'
-        popType='mixture';
+%         popType='mixture';
         vararginoptions(varargin,{'numNeuron','popType'});
         T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)));
       
@@ -304,7 +306,7 @@ switch what
         title('Distribution of noise correlation'); 
 
     case 'CALC_fisherInfo'
-        popType = 'mixture';
+%         popType = 'mixture';
         numRpts = numRun*numRep;
         
         [FI_corr,dprimo] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims,popType);
