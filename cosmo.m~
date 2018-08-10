@@ -4,32 +4,28 @@ function varargout = cosmo(what,varargin)
 baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
 
-stimLow = 1;
-stimHigh = 5;
-dStim = 0.25;
-stims = stimLow:dStim:stimHigh;
-numStim = numel(stims);
-numNeuron = 100;    % number of neurons altogether
+stimLow     = 1;    % Define stimulus range
+stimHigh    = 5;
+dStim       = 0.25; % define stimulus steps
+stims       = stimLow:dStim:stimHigh;
+numStim     = numel(stims);
+numNeuron   = 100;    % number of neurons altogether
+numRun      = 8;  % 8 runs
+numRep      = 10; % 10 repetitions per run, (80) overall
 
 switch what
     case 'GEN_tunedPopulation'
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
-%         numNeuron = 100; % number of neurons altogether
         numPrefs  = 5;
         plotFig   = 1;
-%         stimLow   = 1;
-%         stimHigh  = 5;
-%         dStim     = 0.25;
-%         stims     = stimLow:dStim:stimHigh;
-%         numStim   = numel(stims);
         vararginoptions(varargin,{'numNeuron','numPrefs','plotFig','scale','offset','sigma'});
         
         % determine preferred tuning and variance per neuron
         prefDir = randi(5,[numNeuron,1]);
         sigma   = 7*rand(numNeuron,1)+0.5;     % 0.4 former
         scale   = rand([numNeuron,1]);           % 1 former
-        offset  = rand([numNeuron,1]);           % 0.5 former
+        offset  = rand([numNeuron,1])*0.75 + 0.5;           % 0.5 former
         
         % organised preferred direction - pref: 1,2,...,numPrefs
         TC = @(scale,stim,prefDir,sigma,offset)...
@@ -41,6 +37,8 @@ switch what
         
         rescale = max(max(tuning));
         tuning = tuning./rescale;
+        scale = scale./rescale;
+        offset = offset./rescale;
         
 %         gIndep = tuning.*1.5;
 
@@ -50,12 +48,10 @@ switch what
             for i=1:numPrefs
                 inds = prefDir==i;
                 subplot(1,numPrefs,i)
-%                 plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
-                plot(stims,tuning(inds,:));
+                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
             end
         end
-        
-        %varargout{1}=tuning;
+
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
             'tuning','prefDir','sigma','scale','offset');
@@ -67,19 +63,15 @@ switch what
         plotOn      = 0;
         stimDur     = 2; % in seconds
         dT          = 0.001; % time increment
-        numNeuron   = 100;
-%         StimLow     = 1;
-%         StimHigh    = 5;
-%         dstim       = 0.25;
-%         stims       = StimLow:dstim:StimHigh;
-%         numStim     = numel(stims);
         numRun      = 8;  % 8 runs
         numRep      = 10; % 10 repetitions per run, (80) overall
         spikeScale  = 80; % in Hz
+        
         TC = @(scale,stim,prefDir,sigma,offset)...
-                scale * exp(-((stim-prefDir).^2)./sigma) + offset;     
+                scale * exp(-((stim-prefDir).^2)./sigma) + offset; 
+            
         popType = 'mixture';
-        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale'});
+        vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale','popType'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
         % load the correct tuning matrix
@@ -88,16 +80,17 @@ switch what
             case 'mixture'
                 anatVec = repmat([1; -1],numNeuron,1);
             case 'positive'
-                anatVec = repmat([1; -1],numNeuron,1);     
+                anatVec = repmat([1; 1],numNeuron,1);     
         end    
         for t=1:numStim
             for r=1:numRun
                 for rep=1:numRep
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
                     for n=1:numNeuron
-                        % 1) determine spike rate based on tuning
-%                         tuning = TC(D.scale(n),t,D.prefDir(n),D.sigma(n),D.offset(n));
-                        resp = D.tuning(n,t);
+                        % 1) determine spike rate based on tuning (pull
+                        % from params
+                        resp = TC(D.scale(n),stims(t),D.prefDir(n),D.sigma(n),D.offset(n));
+%                         resp = D.tuning(n,t);
                         spkRate = resp*spikeScale;
                         
                         % 2) generate spikes
@@ -122,14 +115,12 @@ switch what
             end
         end
         figure;
-        lineplot(T.stimDir,T.spikeNum,'split',T.stimDir,'style_thickline');
+        lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)),'-struct','TT');
     case 'PLOT_population'
         % plot the population
-        numNeuron = 100;
-%         numStim = 5;
         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
@@ -138,29 +129,36 @@ switch what
         for l=1:numStim
             legLab{l} = sprintf('stim-%d',l);
         end
+        figure
+        plt.hist(T.spikeNum,'split',T.prefDir);
+        ylabel('number of spikes');
         
-        % extract variance and meTan
+        % extract variance and mean
         T1=tapply(T,{'neuron','prefDir','stimDir'},{'spikeNum','mean','name','spikeNum_mean'},...
             {'spikeNum','var','name','spikeNum_var'});
         % plot responses in dependence of preferred - presented stimulus
         figure(1)
         subplot(1,2,1)
-        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
-                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        %lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
+        %        'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_mean,'split',T1.prefDir,...
+                'leg',legLab,'markertype','o','markersize',12);
+      
         xlabel('Preferred-presented stimulus');
         ylabel('Mean spike number response');
         subplot(1,2,2)
         % calculate the variance
-        lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
-                'leg',legLab,'style_thickline','markertype','o','markersize',12);
+      %  lineplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+       %     'leg',legLab,'style_thickline','markertype','o','markersize',12);
+        plt.line(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir,...
+            'leg',legLab,'markertype','o','markersize',12);
+        
         ylabel('Variance in spike number across trials');
         
         % plot stuff
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
     case 'CALC_corr_dprime'
-        numNeuron = 100;
-%         numStim = 5;
         popType = 'mixture';
 
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
@@ -196,9 +194,13 @@ switch what
                 D.sameNeuron    = double(i==j);
                 pref1           = T1.prefDir(T1.neuron==i);
                 pref2           = T1.prefDir(T1.neuron==j);
+                anat1           = T.anatSign(T.neuron==i);
+                anat2           = T.anatSign(T.neuron==i);
                 D.prefDir1      = pref1(1);
                 D.prefDir2      = pref2(1);
                 D.prefSame      = double(D.prefDir1==D.prefDir2);
+                D.anatSign1     = anat1(1);
+                D.anatSign2     = anat2(1);
                 DD = addstruct(DD,D);
                 Rm(i,j)=D.corrMean;
                 Rv(i,j)=D.corrVar;
@@ -207,32 +209,51 @@ switch what
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     case 'CALC_classify'   
-        numNeuron = 100;
-%         numStim = 5;
-        numRun = 8;
         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
-     
+        
         % add partVec
         T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
         % rearrange
-        for i=1:numRun
+        for i=1:length(unique(T1.numRun))
             tmp = getrow(T1,T1.numRun==i);
             [indx,j,k] = pivottable([tmp.stimDir],[tmp.neuron],[tmp.spikeNum],'mean');
             data(:,:,i) = indx;
         end
-        % submit to classifier, distance calculation
-        acc = nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
-%         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
-%         % plot distances
-%         figure
-%         imagesc(rsa_squareRDM(dist));
+        nNeuron=length(unique(T.neuron));
+        % choose subsets of neurons
+        % positive / negative / mixed corr
+        indx(:,1)=unique(T.neuron(T.anatSign==1));
+        indx(:,2)=unique(T.neuron(T.anatSign==-1));
+        indx(:,3)=[randsample(indx(:,1),nNeuron/4); randsample(indx(:,2),nNeuron/4)]';
+
+        for s=1:size(indx,1)
+            for i=1:2 % give all stimuli or only 5
+                
+                if i==1 % then give all stimuli
+                    data_sub = data(:,indx(:,s),:);
+                    T_sub    = getrow(T,ismember(T.neuron,indx(:,s)));
+                    acc = nn_classifier(data(:,indx(s,:)',:),T.spikeNum,T.numRun,T.stimDir,T.numRep);
+                    T2
+                else
+                    T2=getrow(T,ismember(T.stimDir,T.prefDir));
+                    stim = [1:0.25:5];
+                    indx = ismember(stim,[1:numStim]);
+                    data2 = data(indx',:,:);
+                    acc = nn_classifier(data2,T2.spikeNum,T2.numRun,T2.stimDir,T2.numRep);
+                end
+                % submit to classifier, distance calculation
+            end
+        end
+        %         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
+        %         % plot distances
+        %         figure
+        %         imagesc(rsa_squareRDM(dist));
         keyboard;
-        % save new data, or submit directly to classifier
+        % save classifier results
         
     case 'PLOT_corr'
-        numNeuron=100;
         popType='mixture';
         vararginoptions(varargin,{'numNeuron','popType'});
         T = load(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)));
@@ -250,7 +271,7 @@ switch what
         figure
         subplot(1,3,1)
         imagesc(M_mean);
-        title('Signal correlation across neuron pairs');
+        title(sprintf('Signal correlation across neuron pairs - %s population',popType));
         subplot(1,3,2)
         imagesc(M_var);
         title('Noise correlation across neuron pairs');
@@ -262,7 +283,7 @@ switch what
         subplot(2,2,1)
         plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==0);
         xlabel('Signal correlation'); ylabel('Noise correlation');
-        title('Neurons with diff preferred direction');
+        title(sprintf('Neurons with diff preferred direction - %s population',popType));
         subplot(2,2,2)
         plt.scatter(T.corrMean,T.corrVar,'subset',T.sameNeuron==0 & T.prefSame==1);
         xlabel('Signal correlation'); ylabel('Noise correlation');
@@ -277,7 +298,10 @@ switch what
         hold on;
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
-      
+
+    case 'CALC_fisherInfo'
+        numRpts = numrun*numRep;
+%         [FI_corr,pop_dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim);
         
     otherwise
         fprintf('No such case\n');
