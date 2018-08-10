@@ -80,7 +80,9 @@ switch what
             case 'mixture'
                 anatVec = repmat([1; -1],numNeuron,1);
             case 'positive'
-                anatVec = repmat([1; 1],numNeuron,1);     
+                anatVec = repmat([1; 1],numNeuron,1);
+            case 'negative'
+                anatVec = repmat([-1; -1],numNeuron,1);
         end    
         for t=1:numStim
             for r=1:numRun
@@ -278,9 +280,9 @@ switch what
         title('Distribution of noise correlation'); 
       
     case 'CALC_fisherInfo'
-        numRpts = numrun*numRep;
-%         [FI_corr,pop_dprime] = fisherInfo(dataDir,numNeuron,numRpts,numStim);
-        
+        numRpts = numRun*numRep;
+        [FI_corr,dprimo] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims);
+
     otherwise
         fprintf('No such case\n');
 
