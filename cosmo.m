@@ -4,6 +4,7 @@ function varargout = cosmo(what,varargin)
 baseDir = fileparts(which('cosmo.m'));
 dataDir = fullfile(baseDir,'data');
 
+numPrefs    = 5;
 stimLow     = 1;    % Define stimulus range
 stimHigh    = 5;
 dStim       = 0.25; % define stimulus steps
@@ -19,7 +20,6 @@ switch what
     case 'GEN_tunedPopulation'
         % generate tuning population of neurons
         % usage: cosmo('GEN_population','numNeuron',1000,'numStim',3);
-        numPrefs  = 5;
         plotFig   = 1;
         vararginoptions(varargin,{'numNeuron','numPrefs','plotFig','scale','offset','sigma'});
         
@@ -56,6 +56,7 @@ switch what
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
             'tuning','prefDir','sigma','scale','offset');
+    
     case 'GEN_LIF'
         % define default parameters for LIFModel
         gShared     = 0.003; % shared noise
@@ -71,7 +72,6 @@ switch what
         TC = @(scale,stim,prefDir,sigma,offset)...
                 scale * exp(-((stim-prefDir).^2)./sigma) + offset; 
             
-%         popType = 'mixture';
         vararginoptions(varargin,{'stimRate','gShared','gIndep','plotOn','numNeuron','numStim','dt','stimDur','numRep','spikeScale','popType'});
         
         TT=[]; % initialise for storage (spikes across neurons / stimuli)
@@ -122,9 +122,10 @@ switch what
         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)),'-struct','TT');
+    
     case 'PLOT_population'
         % plot the population
-%         popType = 'mixture';
+
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
@@ -161,8 +162,8 @@ switch what
         % plot stuff
         figure(2)
         barplot(abs(T1.prefDir-T1.stimDir),T1.spikeNum_var,'split',T1.prefDir);
+    
     case 'CALC_corr_dprime'
-%         popType = 'mixture';
 
         vararginoptions(varargin,{'numNeuron','numStim','popType'});
         
@@ -211,13 +212,15 @@ switch what
             fprintf('Calc corr pairs:\tneuron %d/%d\n',i,numNeuron);
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
+    
     case 'CALC_classify'   
-%         popType = 'mixture';
+        nNeuron=48;
+        
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
         
         % add partVec
-        T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
+        T1 = tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
         % rearrange
         for i=1:length(unique(T1.numRun))
             tmp = getrow(T1,T1.numRun==i);
@@ -226,7 +229,6 @@ switch what
         end
         
         % choose subsets of neurons
-        nNeuron=48;
         switch popType
             case 'mixture'
                 % positive / negative / mixed corr
@@ -235,8 +237,11 @@ switch what
                 indxN(:,3)=[randsample(indxN(:,1),nNeuron/2); randsample(indxN(:,2),nNeuron/2)]';
             case 'positive'
                 indxN(:,1)=randsample(unique(T.neuron),nNeuron)';
+            case 'negative'
+                indxN(:,1)=randsample(unique(T.neuron),nNeuron)';
         end
         
+        % submit to classifier, distance calculation
         for s=1:size(indxN,2)
             for i=1:2 % give all stimuli or only 5
                 if i==1 % then give all stimuli
@@ -249,7 +254,7 @@ switch what
                     T_sub    = getrow(T,ismember(T.stimDir,T.prefDir) & ismember(T.neuron,indxN(:,s)));
                     acc(s,i) = nn_classifier(data_sub,T_sub.spikeNum,T_sub.numRun,T_sub.stimDir,T_sub.numRep);
                 end
-                % submit to classifier, distance calculation
+                
             end
         end
         %         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
@@ -258,6 +263,36 @@ switch what
         %         imagesc(rsa_squareRDM(dist));
         keyboard;
         % save classifier results
+        
+    case 'SAVE_subPop'
+        vararginoptions(varargin,{'popType','numNeuron'});
+        
+        T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
+        
+        TT = [];
+        newNeuron=[];
+        allNeuron = 1:numNeuron;
+        
+        if strcmp(popType,'mixture') % consider also weights
+            TT = getrow(T,ismember(T.neuron,[1:numNeuron/2]));
+        else % only prefDir
+            % newNeuron - save so that there is the right number
+            for i=1:length(unique(T.prefDir))
+                origN = unique(T.neuron(T.prefDir==i));
+                randN = randsample(origN,floor(length(origN)/2));
+                newNeuron = [newNeuron randN'];
+                T2 = getrow(T,ismember(T.neuron,randN));
+                TT=addstruct(TT,T2);
+            end
+            missingNew = numNeuron/2 - length(unique(TT.neuron));
+            if missingNew > 0
+                addN = randsample(allNeuron(~ismember(allNeuron,newNeuron)),missingNew);
+                Tadd = getrow(T,ismember(T.neuron,addN));
+                TT=addstruct(TT,Tadd);
+            end
+        end
+        
+        save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron/2,numStim,popType)),'-struct','TT');
         
     case 'PLOT_corr'
 %         popType='mixture';
