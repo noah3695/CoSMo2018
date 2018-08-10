@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage{mathtools}
+\usepackage{amsmath}
 \begin{document}
 
 % Tuning Functions
@@ -14,12 +15,12 @@ p(k | x) = \frac{(g_{fr}*f_{tun}(x))^{k} * exp{\left(-g_{fr}*f_{tun}(x)\right)}}
 
 % LIF Model
 \begin{equation}
-C*\frac{dV}{dt} = g_{leak}(V(t) - V_{rmp}) + g_{epsc}I(t) + g_{shared}\eta + g_{iid}\zeta + g_{signed}\epsilon
+C\frac{dV}{dt} = - g_{leak}(V(t) - V_{rmp}) - g_{epsc}(V(t) - V_{rmp})S(t) + g_{shared}\eta + g_{signed}\epsilon
 \end{equation}
 
 % Dirac Delta Function
 \begin{equation}
-I(t) = \delta(t-\tau)
+S(t) = \sum_{k} \delta(t-\tau_{j}^{k})
 \end{equation}
 
 % Shared Noise distribution
@@ -28,13 +29,19 @@ I(t) = \delta(t-\tau)
 \end{equation}
 
 % IID Noise
-\begin{equation}
-\zeta \sim p(V_{iid}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
-\end{equation}
+%\begin{equation}
+%\zeta \sim p(V_{iid}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
+%\end{equation}
 
 % Signed Noise
 \begin{equation}
 \epsilon \sim p(V_{signed}) = sgn(p=0.5) * \frac{e^{V}}{V!}
 \end{equation}
+
+% Classifier
+\begin{equation}
+d^{2}(R_{train},R_{test}) = \sum_{i=1}^{s} (R_{train,i} - R_{test,i})^{2}
+\end{equation}
+
 	
 \end{document}
