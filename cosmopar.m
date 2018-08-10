@@ -14,7 +14,7 @@ numRun      = 8;  % 8 runs
 numRep      = 10; % 10 repetitions per run, (80) overall
 numPrefs    = 5;
 
-popType = 'negative';
+popType = 'mixture';
 
 switch what
     case 'GEN_tunedPopulation'
@@ -87,6 +87,7 @@ switch what
                 anatVec = repmat([-1; -1],numNeuron,1);
         end    
         for t=1:numStim
+            tic
             for r=1:numRun
                 for rep=1:numRep
                     gSharedVec = sharedNoise(gShared,dT,stimDur); % same across neurons
@@ -128,13 +129,15 @@ switch what
                     
                     TT          = addstruct(TT,T);
                 end
-                fprintf('Generated all neurons for stimulus: %d/%d runs %d/%d\n',t,numStim,r,numRun);
+%                 fprintf('Generated all neurons for stimulus: %d/%d runs %d/%d\n',t,numStim,r,numRun);
             end
+            fprintf('Generated all neurons for stimulus: %d/%d\n',t,numStim);
+            toc
         end
-        figure;
-        lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
-        xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
-        % save the outputs
+%         figure;
+% %         lineplot(TT.stimDir,TT.spikeNum,'split',TT.prefDir,'style_thickline');
+%         xlabel('Direction'); ylabel('Spike number'); title('Responses split by preferred direction');
+%         % save the outputs
         save(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)),'-struct','TT');
     
     case 'PLOT_population'
