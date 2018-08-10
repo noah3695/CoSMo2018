@@ -9,7 +9,7 @@ stimHigh    = 5;
 dStim       = 0.25; % define stimulus steps
 stims       = stimLow:dStim:stimHigh;
 numStim     = numel(stims);
-numNeuron   = 100;    % number of neurons altogether
+numNeuron   = 1000;    % number of neurons altogether
 numRun      = 8;  % 8 runs
 numRep      = 10; % 10 repetitions per run, (80) overall
 
@@ -40,18 +40,17 @@ switch what
         scale = scale./rescale;
         offset = offset./rescale;
         
-%         gIndep = tuning.*1.5;
-
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure;
             hold on;
             for i=1:numPrefs
                 inds = prefDir==i;
+                idx = find(inds==1);
                 subplot(1,numPrefs,i)
-                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
+                plot(stims,TC(scale(inds)),stims,prefDir(inds),sigma(inds),offset(inds));
+               %plot(stims,TC(scale(idx(1:10)),stims,prefDir(idx(1:10)),sigma(idx(1:10)),offset(idx(1:10))),'LineWidth',2);
             end
         end
-
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
             'tuning','prefDir','sigma','scale','offset');

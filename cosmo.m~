@@ -9,7 +9,7 @@ stimHigh    = 5;
 dStim       = 0.25; % define stimulus steps
 stims       = stimLow:dStim:stimHigh;
 numStim     = numel(stims);
-numNeuron   = 100;    % number of neurons altogether
+numNeuron   = 1000;    % number of neurons altogether
 numRun      = 8;  % 8 runs
 numRep      = 10; % 10 repetitions per run, (80) overall
 
@@ -47,8 +47,9 @@ switch what
             hold on;
             for i=1:numPrefs
                 inds = prefDir==i;
+                idx = find(inds==1);
                 subplot(1,numPrefs,i)
-                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
+               %plot(stims,TC(scale(inds)),stims,prefDir(inds),sigma(inds),offset(inds)));
             end
         end
 
@@ -221,27 +222,30 @@ switch what
             [indx,j,k] = pivottable([tmp.stimDir],[tmp.neuron],[tmp.spikeNum],'mean');
             data(:,:,i) = indx;
         end
-        nNeuron=length(unique(T.neuron));
+        
         % choose subsets of neurons
-        % positive / negative / mixed corr
-        indx(:,1)=unique(T.neuron(T.anatSign==1));
-        indx(:,2)=unique(T.neuron(T.anatSign==-1));
-        indx(:,3)=[randsample(indx(:,1),nNeuron/4); randsample(indx(:,2),nNeuron/4)]';
-
-        for s=1:size(indx,1)
+        nNeuron=48;
+        switch popType
+            case 'mixture'
+                % positive / negative / mixed corr
+                indxN(:,1)=randsample(unique(T.neuron(T.anatSign==1)),nNeuron);
+                indxN(:,2)=randsample(unique(T.neuron(T.anatSign==-1)),nNeuron);
+                indxN(:,3)=[randsample(indxN(:,1),nNeuron/2); randsample(indxN(:,2),nNeuron/2)]';
+            case 'positive'
+                indxN(:,1)=randsample(unique(T.neuron),nNeuron)';
+        end
+        
+        for s=1:size(indxN,2)
             for i=1:2 % give all stimuli or only 5
-                
                 if i==1 % then give all stimuli
-                    data_sub = data(:,indx(:,s),:);
-                    T_sub    = getrow(T,ismember(T.neuron,indx(:,s)));
-                    acc = nn_classifier(data(:,indx(s,:)',:),T.spikeNum,T.numRun,T.stimDir,T.numRep);
-                    T2
+                    data_sub = data(:,indxN(:,s),:);
+                    T_sub    = getrow(T,ismember(T.neuron,indxN(:,s)));
+                    acc(s,i) = nn_classifier(data_sub,T_sub.spikeNum,T_sub.numRun,T_sub.stimDir,T_sub.numRep);
                 else
-                    T2=getrow(T,ismember(T.stimDir,T.prefDir));
-                    stim = [1:0.25:5];
-                    indx = ismember(stim,[1:numStim]);
-                    data2 = data(indx',:,:);
-                    acc = nn_classifier(data2,T2.spikeNum,T2.numRun,T2.stimDir,T2.numRep);
+                    indxS    = ismember(stims,[1:numStim]);
+                    data_sub = data(indxS,indxN(:,s),:);
+                    T_sub    = getrow(T,ismember(T.stimDir,T.prefDir) & ismember(T.neuron,indxN(:,s)));
+                    acc(s,i) = nn_classifier(data_sub,T_sub.spikeNum,T_sub.numRun,T_sub.stimDir,T_sub.numRep);
                 end
                 % submit to classifier, distance calculation
             end
