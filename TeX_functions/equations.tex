@@ -1,0 +1,40 @@
+\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+
+% Tuning Functions
+\begin{equation}
+f_{tun}(x) = a * exp{\left( -\frac{(x-\mu)^{2}}{b} \right)} + c
+\end{equation}
+
+% Poisson Spiking
+\begin{equation}
+p(k | x) = \frac{(g_{fr}*f_{tun}(x))^{k} * exp{\left(-g_{fr}*f_{tun}(x)\right)}}{k!}
+\end{equation}
+
+% LIF Model
+\begin{equation}
+C*\frac{dV}{dt} = g_{leak}(V(t) - V_{rmp}) + g_{epsc}I(t) + g_{shared}\eta + g_{iid}\zeta + g_{signed}\epsilon
+\end{equation}
+
+% Dirac Delta Function
+\begin{equation}
+I(t) = \delta(t-\tau)
+\end{equation}
+
+% Shared Noise distribution
+\begin{equation}
+\eta \sim p(V_{shared}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
+\end{equation}
+
+% IID Noise
+\begin{equation}
+\zeta \sim p(V_{iid}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
+\end{equation}
+
+% Signed Noise
+\begin{equation}
+\epsilon \sim p(V_{signed}) = sgn(p=0.5) * \frac{e^{V}}{V!}
+\end{equation}
+	
+\end{document}
