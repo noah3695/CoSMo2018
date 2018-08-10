@@ -1,16 +1,18 @@
 \documentclass{article}
 \usepackage{mathtools}
 \usepackage{amsmath}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 \begin{document}
 
 % Tuning Functions
 \begin{equation}
-f_{tun}(x) = a * exp{\left( -\frac{(x-\mu)^{2}}{b} \right)} + c
+f_{tun}(s) = a * exp{\left( -\frac{(s-\mu)^{2}}{b} \right)} + c
 \end{equation}
 
 % Poisson Spiking
 \begin{equation}
-p(k | x) = \frac{(g_{fr}*f_{tun}(x))^{k} * exp{\left(-g_{fr}*f_{tun}(x)\right)}}{k!}
+p(k | s) = \frac{(g_{fr}*f_{tun}(s))^{k} * exp{\left(-g_{fr}*f_{tun}(s)\right)}}{k!}
 \end{equation}
 
 % LIF Model
@@ -25,13 +27,8 @@ S(t) = \sum_{k} \delta(t-\tau_{j}^{k})
 
 % Shared Noise distribution
 \begin{equation}
-\eta \sim p(V_{shared}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
+\eta \sim p(V_{shared}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{^{2}}{2\pi} \right)}
 \end{equation}
-
-% IID Noise
-%\begin{equation}
-%\zeta \sim p(V_{iid}) = \frac{1}{\sqrt{2\pi}} exp{\left(-\frac{V^{2}}{2\pi} \right)}
-%\end{equation}
 
 % Signed Noise
 \begin{equation}
@@ -40,7 +37,17 @@ S(t) = \sum_{k} \delta(t-\tau_{j}^{k})
 
 % Classifier
 \begin{equation}
-d^{2}(R_{train},R_{test}) = \sum_{i=1}^{s} (R_{train,i} - R_{test,i})^{2}
+\hat{s} = \argmin_{s} \, (\mathbf{\bar{R}}_{train}(s) - \mathbf{R}_{test}(s))^{2}
+\end{equation}
+
+% Fisher information
+\begin{equation}
+Fisher \, Information = FI(s) = \frac{d\mathbf{f}(s)}{ds}^{T} \mathbf{\Sigma}(s)^{-1} \frac{d\mathbf{f}(s)}{ds}
+\end{equation}
+
+% d prime
+\begin{equation}
+d^{'}_{pop}(s) = \delta s \sqrt{FI(s)}
 \end{equation}
 
 	
