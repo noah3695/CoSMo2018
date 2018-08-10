@@ -9,7 +9,7 @@ stimHigh    = 5;
 dStim       = 0.25; % define stimulus steps
 stims       = stimLow:dStim:stimHigh;
 numStim     = numel(stims);
-numNeuron   = 100;    % number of neurons altogether
+numNeuron   = 1000;    % number of neurons altogether
 numRun      = 8;  % 8 runs
 numRep      = 10; % 10 repetitions per run, (80) overall
 
@@ -40,18 +40,17 @@ switch what
         scale = scale./rescale;
         offset = offset./rescale;
         
-%         gIndep = tuning.*1.5;
-
         if plotFig==1 % optional plotting of tuning functions across neurons
             figure;
             hold on;
             for i=1:numPrefs
                 inds = prefDir==i;
+                idx = find(inds==1);
                 subplot(1,numPrefs,i)
-                plot(stims,TC(scale(inds),stims,prefDir(inds),sigma(inds),offset(inds)));
+                plot(stims,TC(scale(inds)),stims,prefDir(inds),sigma(inds),offset(inds));
+               %plot(stims,TC(scale(idx(1:10)),stims,prefDir(idx(1:10)),sigma(idx(1:10)),offset(idx(1:10))),'LineWidth',2);
             end
         end
-
         % save the tuning matrix (numNeuron x numStim)
         save(fullfile(dataDir,sprintf('tunMatrix_%dneurons_%dstim',numNeuron,numStim)),...
             'tuning','prefDir','sigma','scale','offset');
@@ -211,27 +210,52 @@ switch what
         end    
         save(fullfile(dataDir,sprintf('corr_neuronPairs_%dneurons_%sPopulation',numNeuron,popType)),'-struct','DD'); 
     case 'CALC_classify'   
-        numRun = 8;
         popType = 'mixture';
         vararginoptions(varargin,{'numNeuron','numStim','popType'});        
         T = load(fullfile(dataDir,sprintf('LIF_%dneurons_%dstim_%sPopulation',numNeuron,numStim,popType)));
-     
+        
         % add partVec
         T1=tapply(T,{'stimDir','numRun','neuron'},{'spikeNum','mean'});        
         % rearrange
-        for i=1:numRun
+        for i=1:length(unique(T1.numRun))
             tmp = getrow(T1,T1.numRun==i);
             [indx,j,k] = pivottable([tmp.stimDir],[tmp.neuron],[tmp.spikeNum],'mean');
             data(:,:,i) = indx;
         end
-        % submit to classifier, distance calculation
-        acc = nn_classifier(data,T.spikeNum,T.numRun,T.stimDir,T.numRep);
-%         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
-%         % plot distances
-%         figure
-%         imagesc(rsa_squareRDM(dist));
+        
+        % choose subsets of neurons
+        nNeuron=48;
+        switch popType
+            case 'mixture'
+                % positive / negative / mixed corr
+                indxN(:,1)=randsample(unique(T.neuron(T.anatSign==1)),nNeuron);
+                indxN(:,2)=randsample(unique(T.neuron(T.anatSign==-1)),nNeuron);
+                indxN(:,3)=[randsample(indxN(:,1),nNeuron/2); randsample(indxN(:,2),nNeuron/2)]';
+            case 'positive'
+                indxN(:,1)=randsample(unique(T.neuron),nNeuron)';
+        end
+        
+        for s=1:size(indxN,2)
+            for i=1:2 % give all stimuli or only 5
+                if i==1 % then give all stimuli
+                    data_sub = data(:,indxN(:,s),:);
+                    T_sub    = getrow(T,ismember(T.neuron,indxN(:,s)));
+                    acc(s,i) = nn_classifier(data_sub,T_sub.spikeNum,T_sub.numRun,T_sub.stimDir,T_sub.numRep);
+                else
+                    indxS    = ismember(stims,[1:numStim]);
+                    data_sub = data(indxS,indxN(:,s),:);
+                    T_sub    = getrow(T,ismember(T.stimDir,T.prefDir) & ismember(T.neuron,indxN(:,s)));
+                    acc(s,i) = nn_classifier(data_sub,T_sub.spikeNum,T_sub.numRun,T_sub.stimDir,T_sub.numRep);
+                end
+                % submit to classifier, distance calculation
+            end
+        end
+        %         dist = rsa_distanceLDC(T1.spikeNum,T1.numRun,T1.stimDir);
+        %         % plot distances
+        %         figure
+        %         imagesc(rsa_squareRDM(dist));
         keyboard;
-        % save new data, or submit directly to classifier
+        % save classifier results
         
     case 'PLOT_corr'
         popType='mixture';
@@ -278,7 +302,7 @@ switch what
         hold on;
         drawline(mean(T.corrVar(T.sameNeuron==0)),'dir','vert','color',[1 0 0]);
         title('Distribution of noise correlation'); 
-      
+
     case 'CALC_fisherInfo'
         numRpts = numRun*numRep;
         [FI_corr,dprimo] = fisherInfo(dataDir,numNeuron,numRpts,numStim,stims);
